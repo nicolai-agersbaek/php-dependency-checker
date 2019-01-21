@@ -4,6 +4,8 @@ declare(strict_types = 1);
 
 namespace TestPrj\Foo;
 
+use \Woo\Something;
+
 /**
  * TODO: Missing class description.
  *
@@ -13,5 +15,14 @@ namespace TestPrj\Foo;
  */
 class TestCls
 {
-
+    
+    /**
+     * @var Something
+     */
+    private $err;
+    
+    public function __construct()
+    {
+        $this->err = new Something();
+    }
 }

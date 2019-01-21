@@ -20,10 +20,29 @@ func NewChecker(config *Config) *Checker {
 }
 
 func (c *Checker) Run(path string) error {
-	src, err := os.Open(path)
+	fmt.Println("-----")
+	fmt.Printf("Uses: (%s)", path)
+
+	resolved, err := fileUses(path)
 
 	if err != nil {
 		return err
+	}
+
+	for _, resolvedNs := range resolved {
+		fmt.Println(resolvedNs)
+	}
+
+	fmt.Println("-----")
+
+	return nil
+}
+
+func fileUses(path string) ([]string, error) {
+	src, err := os.Open(path)
+
+	if err != nil {
+		return make([]string, 0), err
 	}
 
 	parser := php7.NewParser(src, path)
@@ -33,13 +52,16 @@ func (c *Checker) Run(path string) error {
 		fmt.Println(e)
 	}
 
-	v := visitor.Dumper{
-		Writer: os.Stdout,
-		Indent: "",
+	nsResolver := visitor.NewNamespaceResolver()
+	rootNode := parser.GetRootNode()
+
+	rootNode.Walk(nsResolver)
+
+	resolved := make([]string, len(nsResolver.ResolvedNames))
+
+	for _, resolvedNs := range nsResolver.ResolvedNames {
+		resolved = append(resolved, resolvedNs)
 	}
 
-	rootNode := parser.GetRootNode()
-	rootNode.Walk(v)
-
-	return nil
+	return resolved, nil
 }
