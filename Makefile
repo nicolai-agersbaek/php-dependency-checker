@@ -1,7 +1,7 @@
 PKG_LIST := $(shell go list ./... | grep -v /vendor/)
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
-.PHONY: dep build lint test
+.PHONY: dep build lint test install
 
 ## Run the gofmt tool on all package `.go` files
 fmt:
@@ -20,3 +20,6 @@ dep: ## Get the dependencies
 
 build: dep ## Build the binary file
 	@go build -i -v ./cmd/dependency-checker
+
+install: dep ## Install the binary file
+	@go install -i -v ./cmd/dependency-checker
