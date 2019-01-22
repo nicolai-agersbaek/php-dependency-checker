@@ -30,7 +30,7 @@ func (c *Checker) Run(path string) error {
 		return err
 	}
 
-	for _, resolvedNs := range resolved {
+	for _, resolvedNs := range resolved.Elements() {
 		fmt.Println(resolvedNs)
 	}
 
@@ -43,48 +43,49 @@ func (c *Checker) Run(path string) error {
 // given path is a file, it will analyze that file. If the path is a directory,
 // it will recursively scan each file in the directory and return a combined set
 // of (unique) classes used.
-func (c *Checker) ResolveUses(paths ...string) ([]string, error) {
+func (c *Checker) ResolveUses(paths ...string) (ClassUsesMap, error) {
 	// TODO: Missing tests!
-	// FIXME: Remove duplicates!
-	allUses := make([]string, 0)
+	M := make(ClassUsesMap, 0)
 
 	for _, path := range paths {
-		uses, err := pathUses(path)
+		usesMap, err := pathUses(path)
 
 		if err != nil {
-			return allUses, err
+			return M, err
 		}
 
-		allUses = append(allUses, uses...)
+		M = M.merge(usesMap)
 	}
 
-	return allUses, nil
+	return M, nil
 }
 
-func pathUses(path string) ([]string, error) {
+func pathUses(path string) (ClassUsesMap, error) {
 	// TODO: Missing tests!
 	// FIXME: Remove duplicates!
-	allUses := make([]string, 0)
+	M := make(ClassUsesMap, 0)
+	allUses := NewStringSet()
 
 	info, err := os.Stat(path)
 
 	if err != nil {
-		return allUses, err
+		return M, err
 	}
 
 	if info.IsDir() {
-		allUses, err = dirUses(path)
+		M, err = dirUses(path)
 	} else {
 		allUses, err = fileUses(path)
+		M[path] = allUses
 	}
 
-	return allUses, err
+	return M, err
 }
 
-func dirUses(dir string) ([]string, error) {
+func dirUses(dir string) (ClassUsesMap, error) {
 	// TODO: Missing tests!
 	// FIXME: Remove duplicates!
-	allUses := make([]string, 0)
+	M := make(ClassUsesMap, 0)
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -98,7 +99,7 @@ func dirUses(dir string) ([]string, error) {
 				return err
 			}
 
-			allUses = append(allUses, uses...)
+			M[path] = uses
 		}
 
 		return nil
@@ -108,16 +109,16 @@ func dirUses(dir string) ([]string, error) {
 		return nil, err
 	}
 
-	return allUses, nil
+	return M, nil
 }
 
-func fileUses(path string) ([]string, error) {
+func fileUses(path string) (*StringSet, error) {
 	// TODO: Missing tests!
 	// FIXME: Remove duplicates!
 	src, err := os.Open(path)
 
 	if err != nil {
-		return make([]string, 0), err
+		return nil, err
 	}
 
 	parser := php7.NewParser(src, path)
@@ -132,10 +133,10 @@ func fileUses(path string) ([]string, error) {
 
 	rootNode.Walk(nsResolver)
 
-	resolved := make([]string, len(nsResolver.ResolvedNames))
+	resolved := NewStringSet()
 
 	for _, resolvedNs := range nsResolver.ResolvedNames {
-		resolved = append(resolved, resolvedNs)
+		resolved.Put(resolvedNs)
 	}
 
 	return resolved, nil

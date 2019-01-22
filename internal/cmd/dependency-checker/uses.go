@@ -36,11 +36,15 @@ var usesCmd = &cobra.Command{
 	},
 }
 
-func printUses(c *cobra.Command, uses []string) {
+func printUses(c *cobra.Command, usesMap ClassUsesMap) {
 	c.Println("----------  USES  ----------")
 	//c.Printf(strings.Join(uses, "\n"))
 
-	for _, use := range uses {
-		c.Println(use)
+	for file, uses := range usesMap {
+		c.Printf("%s:\n", file)
+
+		for _, use := range uses.Elements() {
+			c.Printf("\t%s\n", use)
+		}
 	}
 }
