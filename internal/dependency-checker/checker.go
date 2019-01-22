@@ -5,7 +5,6 @@ import (
 	"github.com/z7zmey/php-parser/php7"
 	"github.com/z7zmey/php-parser/visitor"
 	"os"
-	"path/filepath"
 )
 
 const Name = "dependency-checker"
@@ -14,10 +13,6 @@ const Version = "0.1.0"
 
 type Checker struct {
 	Config *Config
-}
-
-func NewChecker(config *Config) *Checker {
-	return &Checker{Config: config}
 }
 
 func (c *Checker) Run(path string) error {
@@ -47,69 +42,37 @@ func (c *Checker) ResolveUses(paths ...string) (ClassUsesMap, error) {
 	// TODO: Missing tests!
 	M := make(ClassUsesMap, 0)
 
-	for _, path := range paths {
-		usesMap, err := pathUses(path)
-
-		if err != nil {
-			return M, err
-		}
-
-		M = M.merge(usesMap)
-	}
-
-	return M, nil
-}
-
-func pathUses(path string) (ClassUsesMap, error) {
-	// TODO: Missing tests!
-	// FIXME: Remove duplicates!
-	M := make(ClassUsesMap, 0)
-	allUses := NewStringSet()
-
-	info, err := os.Stat(path)
-
-	if err != nil {
-		return M, err
-	}
-
-	if info.IsDir() {
-		M, err = dirUses(path)
-	} else {
-		allUses, err = fileUses(path)
-		M[path] = allUses
-	}
-
-	return M, err
-}
-
-func dirUses(dir string) (ClassUsesMap, error) {
-	// TODO: Missing tests!
-	// FIXME: Remove duplicates!
-	M := make(ClassUsesMap, 0)
-
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() {
-			uses, err := fileUses(path)
-
-			if err != nil {
-				return err
-			}
-
-			M[path] = uses
-		}
-
-		return nil
-	})
+	F, err := getFilesByExtension("php", paths...)
 
 	if err != nil {
 		return nil, err
 	}
 
+	for _, f := range uniqueStr(F) {
+		uses, err := fileUses(f)
+
+		if err != nil {
+			return nil, err
+		}
+
+		M[f] = uses
+	}
+
 	return M, nil
+}
+
+func uniqueStr(strings []string) []string {
+	U := make([]string, 0, len(strings))
+	M := make(map[string]bool, len(strings))
+
+	for _, str := range strings {
+		if _, ok := M[str]; !ok {
+			U = append(U, str)
+			M[str] = true
+		}
+	}
+
+	return U
 }
 
 func fileUses(path string) (*StringSet, error) {

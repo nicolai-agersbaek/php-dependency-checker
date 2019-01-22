@@ -7,6 +7,8 @@ import (
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 )
 
+const indent = "  "
+
 func init() {
 	//generateCmd.Flags().BoolVarP(&conf.DryRun, "dry-run", "d", false, "Simulate a run of the generation")
 
@@ -22,7 +24,7 @@ var usesCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(c *cobra.Command, args []string) {
 		// Create a Checker that will perform the analysis
-		checker := NewChecker(conf)
+		checker := &Checker{Config: conf}
 
 		// Run the analysis
 		fmt.Println("Analysing files...")
@@ -44,7 +46,7 @@ func printUses(c *cobra.Command, usesMap ClassUsesMap) {
 		c.Printf("%s:\n", file)
 
 		for _, use := range uses.Elements() {
-			c.Printf("\t%s\n", use)
+			c.Printf("%s%s\n", indent, use)
 		}
 	}
 }

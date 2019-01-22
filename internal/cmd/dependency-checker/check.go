@@ -27,7 +27,7 @@ var generateCmd = &cobra.Command{
 		//cmd.CheckError(generate.ValidateConfig(conf))
 
 		// Create a generator that will perform code generation
-		checker := NewChecker(conf)
+		checker := &Checker{Config: conf}
 
 		// Run the generation using the constructed configuration
 		fmt.Println("Checking files...")
