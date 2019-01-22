@@ -4,12 +4,34 @@ import (
 	"fmt"
 	"github.com/z7zmey/php-parser/php7"
 	"github.com/z7zmey/php-parser/visitor"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 )
 
 const Name = "dependency-checker"
 
 const Version = "0.1.0"
+
+var phpNativeTypes = []string{
+	"bool",
+	"boolean",
+	"double",
+	"float",
+	"int",
+	"integer",
+	"null",
+	"NULL",
+	"object",
+	"string",
+
+	"true",
+	"false",
+	"void",
+
+	"self",
+	"static",
+	"parent",
+}
 
 type Checker struct {
 	Config *Config
@@ -25,7 +47,7 @@ func (c *Checker) Run(path string) error {
 		return err
 	}
 
-	for _, resolvedNs := range resolved.Elements() {
+	for _, resolvedNs := range resolved {
 		fmt.Println(resolvedNs)
 	}
 
@@ -48,7 +70,7 @@ func (c *Checker) ResolveUses(paths ...string) (ClassUsesMap, error) {
 		return nil, err
 	}
 
-	for _, f := range uniqueStr(F) {
+	for _, f := range slices.UniqueString(F) {
 		uses, err := fileUses(f)
 
 		if err != nil {
@@ -61,23 +83,12 @@ func (c *Checker) ResolveUses(paths ...string) (ClassUsesMap, error) {
 	return M, nil
 }
 
-func uniqueStr(strings []string) []string {
-	U := make([]string, 0, len(strings))
-	M := make(map[string]bool, len(strings))
-
-	for _, str := range strings {
-		if _, ok := M[str]; !ok {
-			U = append(U, str)
-			M[str] = true
-		}
-	}
-
-	return U
+func removeNativeTypes(uses []string) []string {
+	return slices.DiffString(uses, phpNativeTypes)
 }
 
-func fileUses(path string) (*StringSet, error) {
+func fileUses(path string) ([]string, error) {
 	// TODO: Missing tests!
-	// FIXME: Remove duplicates!
 	src, err := os.Open(path)
 
 	if err != nil {
@@ -96,11 +107,16 @@ func fileUses(path string) (*StringSet, error) {
 
 	rootNode.Walk(nsResolver)
 
-	resolved := NewStringSet()
+	resolved := make([]string, len(nsResolver.ResolvedNames))
 
+	i := 0
 	for _, resolvedNs := range nsResolver.ResolvedNames {
-		resolved.Put(resolvedNs)
+		resolved[i] = resolvedNs
+		i++
 	}
+
+	resolved = slices.UniqueString(resolved)
+	resolved = removeNativeTypes(resolved)
 
 	return resolved, nil
 }

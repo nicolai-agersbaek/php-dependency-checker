@@ -45,7 +45,7 @@ func printUses(c *cobra.Command, usesMap ClassUsesMap) {
 	for file, uses := range usesMap {
 		c.Printf("%s:\n", file)
 
-		for _, use := range uses.Elements() {
+		for _, use := range uses {
 			c.Printf("%s%s\n", indent, use)
 		}
 	}
