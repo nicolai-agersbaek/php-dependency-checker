@@ -5,6 +5,7 @@ import (
 	"github.com/z7zmey/php-parser/php7"
 	"github.com/z7zmey/php-parser/visitor"
 	"os"
+	"path/filepath"
 )
 
 const Name = "dependency-checker"
@@ -38,7 +39,81 @@ func (c *Checker) Run(path string) error {
 	return nil
 }
 
+// ResolveUses determines the set of classes used by the given path. If the
+// given path is a file, it will analyze that file. If the path is a directory,
+// it will recursively scan each file in the directory and return a combined set
+// of (unique) classes used.
+func (c *Checker) ResolveUses(paths ...string) ([]string, error) {
+	// TODO: Missing tests!
+	// FIXME: Remove duplicates!
+	allUses := make([]string, 0)
+
+	for _, path := range paths {
+		uses, err := pathUses(path)
+
+		if err != nil {
+			return allUses, err
+		}
+
+		allUses = append(allUses, uses...)
+	}
+
+	return allUses, nil
+}
+
+func pathUses(path string) ([]string, error) {
+	// TODO: Missing tests!
+	// FIXME: Remove duplicates!
+	allUses := make([]string, 0)
+
+	info, err := os.Stat(path)
+
+	if err != nil {
+		return allUses, err
+	}
+
+	if info.IsDir() {
+		allUses, err = dirUses(path)
+	} else {
+		allUses, err = fileUses(path)
+	}
+
+	return allUses, err
+}
+
+func dirUses(dir string) ([]string, error) {
+	// TODO: Missing tests!
+	// FIXME: Remove duplicates!
+	allUses := make([]string, 0)
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			uses, err := fileUses(path)
+
+			if err != nil {
+				return err
+			}
+
+			allUses = append(allUses, uses...)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return allUses, nil
+}
+
 func fileUses(path string) ([]string, error) {
+	// TODO: Missing tests!
+	// FIXME: Remove duplicates!
 	src, err := os.Open(path)
 
 	if err != nil {

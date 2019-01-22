@@ -3,17 +3,19 @@ package dependency_checker
 import (
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
-	checker "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 )
+
+var conf = &Config{}
 
 // FIXME: Fix incomplete descriptions!
 var rootCmd = &cobra.Command{
-	Use:   checker.Name,
+	Use:   Name,
 	Short: "dp",
 	Long: `Some
                 long
                 description`,
-	Version: checker.Version,
+	Version: Version,
 	Run: func(c *cobra.Command, args []string) {
 		// Print the help information if command is invoked without any arguments
 		cmd.CheckError(c.Help())

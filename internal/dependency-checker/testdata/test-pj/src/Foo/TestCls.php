@@ -23,6 +23,7 @@ class TestCls
     
     public function __construct()
     {
-        $this->err = new Something();
+        $something = new Something();
+        $else = new \Bar\SomethingElse();
     }
 }

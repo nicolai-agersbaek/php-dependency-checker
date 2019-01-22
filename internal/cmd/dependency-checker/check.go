@@ -7,8 +7,6 @@ import (
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 )
 
-var conf = &Config{}
-
 func init() {
 	//generateCmd.Flags().BoolVarP(&conf.DryRun, "dry-run", "d", false, "Simulate a run of the generation")
 
