@@ -210,7 +210,7 @@ func (r *ImportsResolver) GetChildrenVisitor(Key string) walker.Visitor {
 }
 
 func (r *ImportsResolver) LeaveNode(w walker.Walkable) {
-	r.nsr.LeaveNode(w)
+	// do nothing
 }
 
 func concatNameParts(parts ...[]node.Node) string {
