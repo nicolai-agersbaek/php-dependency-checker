@@ -61,6 +61,11 @@ func (c *Checker) Run(path string) error {
 // it will recursively scan each file in the directory and return a combined set
 // of (unique) classes used.
 func (c *Checker) ResolveUses(paths ...string) (ClassUsesMap, error) {
+	//return ResolveFuncUses(paths...)
+	return ResolveClassUses(paths...)
+}
+
+func ResolveUses(paths []string, filters ...slices.StringFilter) (ClassUsesMap, error) {
 	// TODO: Missing tests!
 	M := make(ClassUsesMap, 0)
 
@@ -77,10 +82,18 @@ func (c *Checker) ResolveUses(paths ...string) (ClassUsesMap, error) {
 			return nil, err
 		}
 
-		M[f] = uses
+		M[f] = slices.FilterString(uses, filters...)
 	}
 
 	return M, nil
+}
+
+func ResolveFuncUses(paths ...string) (ClassUsesMap, error) {
+	return ResolveUses(paths, IsFunctionName)
+}
+
+func ResolveClassUses(paths ...string) (ClassUsesMap, error) {
+	return ResolveUses(paths, IsClassName)
 }
 
 func removeNativeTypes(uses []string) []string {

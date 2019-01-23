@@ -37,3 +37,24 @@ func UniqueString(S []string) []string {
 
 	return U
 }
+
+type StringFilter func(s string) bool
+
+func FilterString(S []string, filters ...StringFilter) []string {
+	// FIXME: Missing tests!
+	F := make([]string, 0, len(S))
+
+InputLoop:
+	for _, str := range S {
+		// apply filters
+		for _, filter := range filters {
+			if !filter(str) {
+				continue InputLoop
+			}
+		}
+
+		F = append(F, str)
+	}
+
+	return F
+}

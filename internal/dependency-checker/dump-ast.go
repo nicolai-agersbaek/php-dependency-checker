@@ -28,6 +28,13 @@ func DumpAst(path string, writer io.Writer) error {
 		fmt.Println(e)
 	}
 
+	// Resolve namespaced names
+	nsResolver := visitor.NewNamespaceResolver()
+	rootNode := parser.GetRootNode()
+
+	rootNode.Walk(nsResolver)
+
+	// Dump AST to writer
 	dumper := visitor.Dumper{
 		Writer: writer,
 		Indent: "",
@@ -35,7 +42,6 @@ func DumpAst(path string, writer io.Writer) error {
 		//Positions: parser.GetPositions(),
 	}
 
-	rootNode := parser.GetRootNode()
 	rootNode.Walk(dumper)
 
 	return nil

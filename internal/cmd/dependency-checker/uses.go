@@ -23,25 +23,24 @@ var usesCmd = &cobra.Command{
 	Short: "Resolve class uses for a file or files in a directory.",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(c *cobra.Command, args []string) {
-		// Create a Checker that will perform the analysis
-		checker := &Checker{Config: conf}
-
 		// Run the analysis
 		fmt.Println("Analysing files...")
 
-		uses, err := checker.ResolveUses(args...)
+		funcUses, err := ResolveUses(args, IsFunctionName)
+		cmd.CheckError(err)
 
+		clsUses, err := ResolveUses(args, IsClassName)
 		cmd.CheckError(err)
 
 		// Print uses
-		printUses(c, uses)
+		c.Println("----------  FUNCTIONS  ----------")
+		printUses(c, funcUses)
+		c.Println("----------  CLASSES  ----------")
+		printUses(c, clsUses)
 	},
 }
 
 func printUses(c *cobra.Command, usesMap ClassUsesMap) {
-	c.Println("----------  USES  ----------")
-	//c.Printf(strings.Join(uses, "\n"))
-
 	for file, uses := range usesMap {
 		c.Printf("%s:\n", file)
 
