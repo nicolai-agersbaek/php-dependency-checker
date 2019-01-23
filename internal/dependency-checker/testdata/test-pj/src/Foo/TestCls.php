@@ -6,7 +6,7 @@ namespace TestPrj\Foo;
 
 use \Woo\Something;
 
-class TestCls
+class TestCls extends \Some\Parent implements \Foo\SomeInterface, Bar\OtherInterface
 {
     
     public function __construct()

@@ -28,12 +28,38 @@ func NewImportsResolver() *ImportsResolver {
 	}
 }
 
-func (r *ImportsResolver) addProvidedFunction(fqn string) {
+func (r *ImportsResolver) addFunctionUsed(n node.Node) {
+	fqn := r.nsr.ResolvedNames[n]
+	r.FunctionsUsed = append(r.FunctionsUsed, fqn)
+}
+
+func (r *ImportsResolver) addClassUsed(n node.Node) {
+	fqn := r.nsr.ResolvedNames[n]
+	r.ClassesUsed = append(r.ClassesUsed, fqn)
+}
+
+func (r *ImportsResolver) addFunctionProvided(n node.Node) {
+	fqn := r.nsr.ResolvedNames[n]
 	r.FunctionsProvided = append(r.FunctionsProvided, fqn)
 }
 
-func (r *ImportsResolver) addProvidedClass(fqn string) {
+func (r *ImportsResolver) addClassProvided(n node.Node) {
+	fqn := r.nsr.ResolvedNames[n]
 	r.ClassesProvided = append(r.ClassesProvided, fqn)
+}
+
+func (r *ImportsResolver) uses(n node.Node) {
+	fqn := r.nsr.ResolvedNames[n]
+
+	if IsFunctionName(fqn) {
+		r.addFunctionUsed(n)
+		return
+	}
+
+	if IsClassName(fqn) {
+		r.addClassUsed(n)
+		return
+	}
 }
 
 func (r *ImportsResolver) EnterNode(w walker.Walkable) bool {
@@ -47,26 +73,16 @@ func (r *ImportsResolver) EnterNode(w walker.Walkable) bool {
 		}
 
 	case *stmt.UseList:
-		useType := ""
-		if n.UseType != nil {
-			useType = n.UseType.(*node.Identifier).Value
-		}
-
 		for _, nn := range n.Uses {
-			r.nsr.AddAlias(useType, nn, nil)
+			r.uses(nn)
 		}
 
 		// no reason to iterate into depth
 		return false
 
 	case *stmt.GroupUse:
-		useType := ""
-		if n.UseType != nil {
-			useType = n.UseType.(*node.Identifier).Value
-		}
-
 		for _, nn := range n.UseList {
-			r.nsr.AddAlias(useType, nn, n.Prefix.(*name.Name).Parts)
+			r.uses(nn)
 		}
 
 		// no reason to iterate into depth
@@ -74,95 +90,94 @@ func (r *ImportsResolver) EnterNode(w walker.Walkable) bool {
 
 	case *stmt.Class:
 		if n.Extends != nil {
-			r.nsr.ResolveName(n.Extends.ClassName, "")
+			r.addClassUsed(n.Extends.ClassName)
 		}
 
 		if n.Implements != nil {
 			for _, interfaceName := range n.Implements.InterfaceNames {
-				r.nsr.ResolveName(interfaceName, "")
+				r.addClassUsed(interfaceName)
 			}
 		}
 
 		if n.ClassName != nil {
-			r.nsr.AddNamespacedName(n, n.ClassName.(*node.Identifier).Value)
-			r.addProvidedClass(r.nsr.ResolvedNames[n])
+			r.addClassProvided(n)
 		}
 
 	case *stmt.Interface:
 		if n.Extends != nil {
 			for _, interfaceName := range n.Extends.InterfaceNames {
-				r.nsr.ResolveName(interfaceName, "")
+				r.addClassUsed(interfaceName)
 			}
 		}
 
-		r.nsr.AddNamespacedName(n, n.InterfaceName.(*node.Identifier).Value)
+		r.addClassProvided(n)
 
 	case *stmt.Trait:
-		r.nsr.AddNamespacedName(n, n.TraitName.(*node.Identifier).Value)
+		r.addClassProvided(n)
 
 	case *stmt.Function:
-		r.nsr.AddNamespacedName(n, n.FunctionName.(*node.Identifier).Value)
+		r.addFunctionProvided(n)
 
 		for _, parameter := range n.Params {
-			r.nsr.ResolveType(parameter.(*node.Parameter).VariableType)
+			r.addClassUsed(parameter)
 		}
 
 		if n.ReturnType != nil {
-			r.nsr.ResolveType(n.ReturnType)
+			r.addClassUsed(n.ReturnType)
 		}
 
 	case *stmt.ClassMethod:
 		for _, parameter := range n.Params {
-			r.nsr.ResolveType(parameter.(*node.Parameter).VariableType)
+			r.addClassUsed(parameter)
 		}
 
 		if n.ReturnType != nil {
-			r.nsr.ResolveType(n.ReturnType)
+			r.addClassUsed(n.ReturnType)
 		}
 
 	case *expr.Closure:
 		for _, parameter := range n.Params {
-			r.nsr.ResolveType(parameter.(*node.Parameter).VariableType)
+			r.addClassUsed(parameter)
 		}
 
 		if n.ReturnType != nil {
-			r.nsr.ResolveType(n.ReturnType)
+			r.addClassUsed(n.ReturnType)
 		}
 
 	case *stmt.ConstList:
 		for _, constant := range n.Consts {
-			r.nsr.AddNamespacedName(constant, constant.(*stmt.Constant).ConstantName.(*node.Identifier).Value)
+			r.addClassProvided(constant)
 		}
 
 	case *expr.StaticCall:
-		r.nsr.ResolveName(n.Class, "")
+		r.addClassUsed(n.Class)
 
 	case *expr.StaticPropertyFetch:
-		r.nsr.ResolveName(n.Class, "")
+		r.addClassUsed(n.Class)
 
 	case *expr.ClassConstFetch:
-		r.nsr.ResolveName(n.Class, "")
+		r.addClassUsed(n.Class)
 
 	case *expr.New:
-		r.nsr.ResolveName(n.Class, "")
+		r.addClassUsed(n.Class)
 
 	case *expr.InstanceOf:
-		r.nsr.ResolveName(n.Class, "")
+		r.addClassUsed(n.Class)
 
 	case *stmt.Catch:
 		for _, t := range n.Types {
-			r.nsr.ResolveName(t, "")
+			r.addClassUsed(t)
 		}
 
 	case *expr.FunctionCall:
-		r.nsr.ResolveName(n.Function, "function")
+		r.addFunctionUsed(n.Function)
 
 	case *expr.ConstFetch:
-		r.nsr.ResolveName(n.Constant, "const")
+		r.addClassUsed(n.Constant)
 
 	case *stmt.TraitUse:
 		for _, t := range n.Traits {
-			r.nsr.ResolveName(t, "")
+			r.addClassUsed(t)
 		}
 
 		if n.TraitAdaptationList != nil {
@@ -171,16 +186,16 @@ func (r *ImportsResolver) EnterNode(w walker.Walkable) bool {
 				case *stmt.TraitUsePrecedence:
 					refTrait := aa.Ref.(*stmt.TraitMethodRef).Trait
 					if refTrait != nil {
-						r.nsr.ResolveName(refTrait, "")
+						r.addClassUsed(refTrait)
 					}
 					for _, insteadOf := range aa.Insteadof {
-						r.nsr.ResolveName(insteadOf, "")
+						r.addClassUsed(insteadOf)
 					}
 
 				case *stmt.TraitUseAlias:
 					refTrait := aa.Ref.(*stmt.TraitMethodRef).Trait
 					if refTrait != nil {
-						r.nsr.ResolveName(refTrait, "")
+						r.addClassUsed(refTrait)
 					}
 				}
 			}
@@ -237,6 +252,10 @@ func ResolveImports(path string) (*ImportsResolver, error) {
 	resolver := NewImportsResolver()
 	rootNode := parser.GetRootNode()
 
+	// Resolve fully-qualified names
+	rootNode.Walk(resolver.nsr)
+
+	// Resolve imports
 	rootNode.Walk(resolver)
 
 	return resolver, nil
