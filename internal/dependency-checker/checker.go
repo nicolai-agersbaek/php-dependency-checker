@@ -95,6 +95,12 @@ func fileUses(path string) ([]string, error) {
 		return nil, err
 	}
 
+	defer func() {
+		if err := src.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
 	parser := php7.NewParser(src, path)
 	parser.Parse()
 
