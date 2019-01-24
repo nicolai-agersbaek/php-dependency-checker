@@ -52,8 +52,11 @@ func (p *printer) linesWithTitle(title string, lines []string) {
 }
 
 func (p *printer) title(title string) {
+	titleBreak := strings.Repeat("-", len(title))
+
+	p.c.Println(titleBreak)
 	p.c.Println(title)
-	p.c.Println(strings.Repeat("-", len(title)))
+	p.c.Println(titleBreak)
 }
 
 func (p *printer) lines(lines []string) {

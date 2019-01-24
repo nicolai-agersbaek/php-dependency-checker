@@ -9,6 +9,7 @@ import (
 	"github.com/z7zmey/php-parser/php7"
 	"github.com/z7zmey/php-parser/visitor"
 	"github.com/z7zmey/php-parser/walker"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 )
 
@@ -26,6 +27,25 @@ func NewImportsResolver() *ImportsResolver {
 		make([]string, 0),
 		make([]string, 0),
 	}
+}
+
+func (r *ImportsResolver) clean() {
+	r.FunctionsUsed = cleanResolved(r.FunctionsUsed)
+	r.ClassesUsed = cleanResolved(r.ClassesUsed)
+	r.FunctionsProvided = cleanResolved(r.FunctionsProvided)
+	r.ClassesProvided = cleanResolved(r.ClassesProvided)
+}
+
+func cleanResolved(resolved []string) []string {
+	resolved = slices.UniqueString(resolved)
+	resolved = removeNativeTypes(resolved)
+	resolved = slices.FilterString(resolved, IsEmpty)
+
+	return resolved
+}
+
+func IsEmpty(s string) bool {
+	return s != ""
 }
 
 func (r *ImportsResolver) addFunctionUsed(n node.Node) {
@@ -257,6 +277,7 @@ func ResolveImports(path string) (*ImportsResolver, error) {
 
 	// Resolve imports
 	rootNode.Walk(resolver)
+	resolver.clean()
 
 	return resolver, nil
 }
