@@ -34,10 +34,10 @@ func imports(c *cobra.Command, args []string) {
 	p := printer{c}
 
 	// Print uses
-	p.linesWithTitle("Functions used:", imports.FunctionsUsed)
-	p.linesWithTitle("Classes used:", imports.ClassesUsed)
-	p.linesWithTitle("Functions provided:", imports.FunctionsProvided)
-	p.linesWithTitle("Classes provided:", imports.ClassesProvided)
+	//p.linesWithTitle("Functions used:", imports.Imports.Functions)
+	p.linesWithTitle("Imports:", imports.Imports.Classes)
+	//p.linesWithTitle("Functions provided:", imports.Exports.Functions)
+	p.linesWithTitle("Exports:", imports.Exports.Classes)
 }
 
 type printer struct {

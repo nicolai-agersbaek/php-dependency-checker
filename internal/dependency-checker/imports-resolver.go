@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/z7zmey/php-parser/node"
 	"github.com/z7zmey/php-parser/node/expr"
-	"github.com/z7zmey/php-parser/node/name"
 	"github.com/z7zmey/php-parser/node/stmt"
 	"github.com/z7zmey/php-parser/php7"
 	"github.com/z7zmey/php-parser/visitor"
@@ -15,13 +14,37 @@ import (
 
 type ImportsResolver struct {
 	nsr                                *visitor.NamespaceResolver
+	Imports                            *Names
+	Exports                            *Names
 	FunctionsUsed, ClassesUsed         []string
 	FunctionsProvided, ClassesProvided []string
+}
+
+type Names struct {
+	Functions []string
+	Classes   []string
+	Constants []string
+}
+
+func NewNames() *Names {
+	return &Names{
+		make([]string, 0),
+		make([]string, 0),
+		make([]string, 0),
+	}
+}
+
+func (n *Names) clean() {
+	n.Functions = cleanResolved(n.Functions)
+	n.Classes = cleanResolved(n.Classes)
+	n.Constants = cleanResolved(n.Constants)
 }
 
 func NewImportsResolver() *ImportsResolver {
 	return &ImportsResolver{
 		visitor.NewNamespaceResolver(),
+		NewNames(),
+		NewNames(),
 		make([]string, 0),
 		make([]string, 0),
 		make([]string, 0),
@@ -30,6 +53,8 @@ func NewImportsResolver() *ImportsResolver {
 }
 
 func (r *ImportsResolver) clean() {
+	r.Imports.clean()
+	r.Exports.clean()
 	r.FunctionsUsed = cleanResolved(r.FunctionsUsed)
 	r.ClassesUsed = cleanResolved(r.ClassesUsed)
 	r.FunctionsProvided = cleanResolved(r.FunctionsProvided)
@@ -51,25 +76,30 @@ func IsEmpty(s string) bool {
 func (r *ImportsResolver) addFunctionUsed(n node.Node) {
 	fqn := r.nsr.ResolvedNames[n]
 	r.FunctionsUsed = append(r.FunctionsUsed, fqn)
+	r.Imports.Functions = append(r.Imports.Functions, fqn)
 }
 
 func (r *ImportsResolver) addClassUsed(n node.Node) {
 	fqn := r.nsr.ResolvedNames[n]
 	r.ClassesUsed = append(r.ClassesUsed, fqn)
+	r.Imports.Classes = append(r.Imports.Classes, fqn)
 }
 
 func (r *ImportsResolver) addFunctionProvided(n node.Node) {
 	fqn := r.nsr.ResolvedNames[n]
 	r.FunctionsProvided = append(r.FunctionsProvided, fqn)
+	r.Exports.Classes = append(r.Exports.Functions, fqn)
 }
 
 func (r *ImportsResolver) addClassProvided(n node.Node) {
 	fqn := r.nsr.ResolvedNames[n]
 	r.ClassesProvided = append(r.ClassesProvided, fqn)
+	r.Exports.Classes = append(r.Exports.Classes, fqn)
 }
 
 func (r *ImportsResolver) uses(n node.Node) {
 	fqn := r.nsr.ResolvedNames[n]
+	fmt.Println(fqn)
 
 	if IsFunctionName(fqn) {
 		r.addFunctionUsed(n)
@@ -84,14 +114,6 @@ func (r *ImportsResolver) uses(n node.Node) {
 
 func (r *ImportsResolver) EnterNode(w walker.Walkable) bool {
 	switch n := w.(type) {
-	case *stmt.Namespace:
-		if n.NamespaceName == nil {
-			r.nsr.Namespace = visitor.NewNamespace("")
-		} else {
-			NSParts := n.NamespaceName.(*name.Name).Parts
-			r.nsr.Namespace = visitor.NewNamespace(concatNameParts(NSParts))
-		}
-
 	case *stmt.UseList:
 		for _, nn := range n.Uses {
 			r.uses(nn)
@@ -231,22 +253,6 @@ func (r *ImportsResolver) GetChildrenVisitor(Key string) walker.Visitor {
 
 func (r *ImportsResolver) LeaveNode(w walker.Walkable) {
 	// do nothing
-}
-
-func concatNameParts(parts ...[]node.Node) string {
-	str := ""
-
-	for _, p := range parts {
-		for _, n := range p {
-			if str == "" {
-				str = n.(*name.NamePart).Value
-			} else {
-				str = str + "\\" + n.(*name.NamePart).Value
-			}
-		}
-	}
-
-	return str
 }
 
 func ResolveImports(path string) (*ImportsResolver, error) {
