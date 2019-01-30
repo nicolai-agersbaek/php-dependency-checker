@@ -300,16 +300,6 @@ func resolveImports(paths ...string) (*Names, *Names, error) {
 	return mergeNames(I), mergeNames(E), nil
 }
 
-func mergeNames(names []*Names) *Names {
-	merged := NewNames()
-
-	for _, n := range names {
-		merged = merged.Merge(n)
-	}
-
-	return merged
-}
-
 func resolveFileImports(path string) (*Names, *Names, error) {
 	src, err := os.Open(path)
 
@@ -326,26 +316,29 @@ func resolveFileImports(path string) (*Names, *Names, error) {
 	parser := php7.NewParser(src, path)
 	parser.Parse()
 
-	// TODO: Return imports, exports and errors as a combine Result
-	logParserErrors(path, parser.GetErrors())
+	// TODO: Return imports, exports and errors as a combined Result
+	parserErrors := parser.GetErrors()
 
 	resolver := NewImportsResolver()
-	rootNode := parser.GetRootNode()
 
-	// Resolve imports
-	rootNode.Walk(resolver)
-	resolver.clean()
+	if len(parserErrors) > 0 {
+		logParserErrors(path, parser.GetErrors())
+	} else {
+		rootNode := parser.GetRootNode()
+
+		// Resolve imports
+		rootNode.Walk(resolver)
+		resolver.clean()
+	}
 
 	return resolver.Imports, resolver.Exports, nil
 }
 
 func logParserErrors(path string, errors []*errors.Error) {
-	if len(errors) > 0 {
-		indent := "   "
-		fmt.Println(path, ":")
+	indent := "   "
+	fmt.Println(path, ":")
 
-		for _, e := range errors {
-			fmt.Println(indent, e)
-		}
+	for _, e := range errors {
+		fmt.Println(indent, e)
 	}
 }

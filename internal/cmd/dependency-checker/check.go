@@ -1,10 +1,10 @@
 package dependency_checker
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"path/filepath"
 )
 
@@ -27,7 +27,6 @@ var generateCmd = &cobra.Command{
 	Short: "Check dependencies for Composer project in dir.",
 	Args:  cobra.MinimumNArgs(1),
 	Run:   check,
-	//Run:   listFiles,
 }
 
 func check(c *cobra.Command, args []string) {
@@ -44,48 +43,30 @@ func check(c *cobra.Command, args []string) {
 
 	vendor, src := filepath.Join(root, vendorDirName), filepath.Join(root, sourceDirName)
 
-	var imports, exports *Names
+	var srcImports, srcExports, vendorExports *Names
 	var err error
 
-	// Resolve exports from 'vendor'
-	_, exports, err = ResolveImports(vendor)
+	// Resolve vendorExports from 'vendor'
+	_, vendorExports, err = ResolveImports(vendor)
 	cmd.CheckError(err)
 
-	// Resolve imports from 'src'
-	imports, _, err = ResolveImports(src)
+	// Resolve srcImports from 'src'
+	srcImports, srcExports, err = ResolveImports(src)
 	cmd.CheckError(err)
 
 	// Calculate unexported uses
-	//cmd.CheckError(err)
+	allExports := vendorExports.Merge(srcExports)
+	diff := slices.DiffString(srcImports.Classes, allExports.Classes)
 
 	// endregion [ Perform analysis ]
 
 	p := printer{c}
 
+	p.linesWithTitle("Unexported uses:", diff)
+
 	// Print uses
-	//p.linesWithTitle("Imports (functions):", imports.Functions)
-	p.linesWithTitle("Imports (classes):", imports.Classes)
-	//p.linesWithTitle("Exports (functions):", exports.Functions)
-	p.linesWithTitle("Exports (classes):", exports.Classes[:10])
-}
-
-func listFiles(c *cobra.Command, args []string) {
-	root := args[0]
-	//root, err := filepath.Abs(args[0])
-	//cmd.CheckError(err)
-
-	src := filepath.Join(root, sourceDirName)
-	pattern := filepath.Join(root, src, "**/*.php")
-
-	p := printer{c}
-
-	printFiles(p, pattern)
-}
-
-func printFiles(p printer, pattern string) {
-	files, err := filepath.Glob(pattern)
-	cmd.CheckError(err)
-
-	p.title(fmt.Sprintf("Files matching [%s]:", pattern))
-	p.lines(files)
+	//p.linesWithTitle("Imports (functions):", srcImports.Functions)
+	//p.linesWithTitle("Imports (classes):", srcImports.Classes[:10])
+	//p.linesWithTitle("Exports (functions):", vendorExports.Functions)
+	//p.linesWithTitle("Exports (classes):", vendorExports.Classes[:10])
 }

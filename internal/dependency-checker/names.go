@@ -77,6 +77,16 @@ func (n *Names) clean() {
 	n.Constants = cleanResolved(n.Constants)
 }
 
+func mergeNames(names []*Names) *Names {
+	merged := NewNames()
+
+	for _, n := range names {
+		merged = merged.Merge(n)
+	}
+
+	return merged
+}
+
 func cleanResolved(resolved []string) []string {
 	// FIXME: Missing tests!
 	resolved = slices.UniqueString(resolved)
