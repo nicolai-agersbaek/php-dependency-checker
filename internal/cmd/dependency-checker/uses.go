@@ -43,6 +43,10 @@ type printer struct {
 	c *cobra.Command
 }
 
+func newPrinter(c *cobra.Command) *printer {
+	return &printer{c: c}
+}
+
 func (p *printer) linesWithTitle(title string, lines []string) {
 	if len(lines) > 0 {
 		p.title(title)

@@ -58,3 +58,17 @@ InputLoop:
 
 	return F
 }
+
+type StringMapping func(s string) string
+
+func MapString(S []string, m StringMapping) []string {
+	// FIXME: Missing tests!
+	M := make([]string, 0, len(S))
+
+	var i int
+	for _, str := range S {
+		M[i] = m(str)
+	}
+
+	return M
+}

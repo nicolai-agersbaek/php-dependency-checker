@@ -2,14 +2,24 @@
 declare(strict_types = 1);
 
 //printClasses();
-//printFunctionsMin();
 //printConstants();
-echo 'php -r $F=get_defined_functions(true)["internal"];foreach ($F as $f) {printf("$f\n");}';
 
-function printFunctionsMin() : void
-{
-    $F=get_defined_functions(true)["internal"];foreach ($F as $f) {printf("$f\n");}
-}
+//echo 'php -r $F=get_defined_functions(true)["internal"];foreach ($F as $f) {printf("$f\n");}';
+
+$eol = PHP_EOL;
+
+$eolRepl = [
+    "\n" => '\n',
+    "\r" => '\r',
+];
+//$eolFormatted = \strtr(PHP_EOL, $eolRepl);
+
+
+$eolFormatted=strtr(PHP_EOL,["\n"=>'\n',"\r"=>'\r']);
+
+//$eolFormatted=str_replace(["\r","\n"],['\r','\n'],PHP_EOL);
+
+echo "PHP_EOL = {$eolFormatted}\n";
 
 function printFunctions() : void
 {
@@ -41,7 +51,7 @@ function printClasses() : void
     printLinesWithTitle('TRAITS:', $traits);
 }
 
-function printConstants() : void
+function getDefinedConstants()
 {
     $byCategory = get_defined_constants(true);
     
@@ -54,9 +64,12 @@ function printConstants() : void
         $allConstants[] = array_keys($C);
     }
     
-    $allConstants = array_merge(...$allConstants);
-    
-    printLinesWithTitle('CONSTANTS:', $allConstants);
+    return array_merge(...$allConstants);
+}
+
+function printConstants() : void
+{
+    printLinesWithTitle('CONSTANTS:', getDefinedConstants());
 }
 
 /**
