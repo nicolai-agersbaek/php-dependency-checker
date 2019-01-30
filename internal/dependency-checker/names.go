@@ -34,8 +34,8 @@ func (n *Names) Add(fqn string) {
 }
 
 func (n *Names) Merge(names *Names) *Names {
-	n.Functions = append(n.Functions, names.Constants...)
-	n.Classes = append(n.Classes, names.Constants...)
+	n.Functions = append(n.Functions, names.Functions...)
+	n.Classes = append(n.Classes, names.Classes...)
 	n.Constants = append(n.Constants, names.Constants...)
 
 	return n

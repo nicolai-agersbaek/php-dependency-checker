@@ -280,7 +280,20 @@ func concatNameParts(parts ...[]node.Node) string {
 	return str
 }
 
-func ResolveDirImports(dir string) (*Names, *Names, error) {
+func ResolveImports(path string) (*Names, *Names, error) {
+	var imports, exports *Names
+	var err error
+
+	if isDir(path) {
+		imports, exports, err = resolveDirImports(path)
+	} else {
+		imports, exports, err = resolveFileImports(path)
+	}
+
+	return imports, exports, err
+}
+
+func resolveDirImports(dir string) (*Names, *Names, error) {
 	I, E := make([]*Names, 0), make([]*Names, 0)
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -289,7 +302,7 @@ func ResolveDirImports(dir string) (*Names, *Names, error) {
 		}
 
 		if !info.IsDir() {
-			imports, exports, err := ResolveFileImports(path)
+			imports, exports, err := resolveFileImports(path)
 
 			if err != nil {
 				return err
@@ -319,7 +332,7 @@ func mergeNames(names []*Names) *Names {
 	return merged
 }
 
-func ResolveFileImports(path string) (*Names, *Names, error) {
+func resolveFileImports(path string) (*Names, *Names, error) {
 	src, err := os.Open(path)
 
 	if err != nil {
