@@ -12,27 +12,6 @@ const Name = "dependency-checker"
 
 const Version = "0.1.0"
 
-var phpNativeTypes = []string{
-	"bool",
-	"boolean",
-	"double",
-	"float",
-	"int",
-	"integer",
-	"null",
-	"NULL",
-	"object",
-	"string",
-
-	"true",
-	"false",
-	"void",
-
-	"self",
-	"static",
-	"parent",
-}
-
 type Checker struct {
 	Config *Config
 }
@@ -94,10 +73,6 @@ func ResolveFuncUses(paths ...string) (ClassUsesMap, error) {
 
 func ResolveClassUses(paths ...string) (ClassUsesMap, error) {
 	return ResolveUses(paths, IsClassName)
-}
-
-func removeNativeTypes(uses []string) []string {
-	return slices.DiffString(uses, phpNativeTypes)
 }
 
 func fileUses(path string) ([]string, error) {

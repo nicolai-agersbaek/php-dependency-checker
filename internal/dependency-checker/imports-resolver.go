@@ -2,6 +2,7 @@ package dependency_checker
 
 import (
 	"fmt"
+	"github.com/z7zmey/php-parser/errors"
 	"github.com/z7zmey/php-parser/node"
 	"github.com/z7zmey/php-parser/node/expr"
 	"github.com/z7zmey/php-parser/node/name"
@@ -9,9 +10,7 @@ import (
 	"github.com/z7zmey/php-parser/php7"
 	"github.com/z7zmey/php-parser/visitor"
 	"github.com/z7zmey/php-parser/walker"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
-	"path/filepath"
 )
 
 const NamespaceSeparator = "\\"
@@ -33,18 +32,6 @@ func NewImportsResolver() *ImportsResolver {
 func (r *ImportsResolver) clean() {
 	r.Imports.clean()
 	r.Exports.clean()
-}
-
-func cleanResolved(resolved []string) []string {
-	resolved = slices.UniqueString(resolved)
-	resolved = removeNativeTypes(resolved)
-	resolved = slices.FilterString(resolved, IsEmpty)
-
-	return resolved
-}
-
-func IsEmpty(s string) bool {
-	return s != ""
 }
 
 func (r *ImportsResolver) addImport(n node.Node) {
@@ -281,42 +268,33 @@ func concatNameParts(parts ...[]node.Node) string {
 }
 
 func ResolveImports(path string) (*Names, *Names, error) {
-	var imports, exports *Names
 	var err error
 
-	if isDir(path) {
-		imports, exports, err = resolveDirImports(path)
-	} else {
-		imports, exports, err = resolveFileImports(path)
+	phpFiles, err := getFilesInDirByExtension("php", path)
+
+	if err != nil {
+		return nil, nil, err
 	}
+
+	var imports, exports *Names
+
+	imports, exports, err = resolveImports(phpFiles...)
 
 	return imports, exports, err
 }
 
-func resolveDirImports(dir string) (*Names, *Names, error) {
+func resolveImports(paths ...string) (*Names, *Names, error) {
 	I, E := make([]*Names, 0), make([]*Names, 0)
 
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	for _, path := range paths {
+		imports, exports, err := resolveFileImports(path)
+
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
-		if !info.IsDir() {
-			imports, exports, err := resolveFileImports(path)
-
-			if err != nil {
-				return err
-			}
-
-			I = append(I, imports)
-			E = append(E, exports)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, nil, err
+		I = append(I, imports)
+		E = append(E, exports)
 	}
 
 	return mergeNames(I), mergeNames(E), nil
@@ -348,9 +326,8 @@ func resolveFileImports(path string) (*Names, *Names, error) {
 	parser := php7.NewParser(src, path)
 	parser.Parse()
 
-	for _, e := range parser.GetErrors() {
-		fmt.Println(e)
-	}
+	// TODO: Return imports, exports and errors as a combine Result
+	logParserErrors(path, parser.GetErrors())
 
 	resolver := NewImportsResolver()
 	rootNode := parser.GetRootNode()
@@ -360,4 +337,15 @@ func resolveFileImports(path string) (*Names, *Names, error) {
 	resolver.clean()
 
 	return resolver.Imports, resolver.Exports, nil
+}
+
+func logParserErrors(path string, errors []*errors.Error) {
+	if len(errors) > 0 {
+		indent := "   "
+		fmt.Println(path, ":")
+
+		for _, e := range errors {
+			fmt.Println(indent, e)
+		}
+	}
 }

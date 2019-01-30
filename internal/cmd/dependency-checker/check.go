@@ -1,10 +1,16 @@
 package dependency_checker
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
-	"os"
+	"path/filepath"
+)
+
+const (
+	sourceDirName = "src"
+	vendorDirName = "vendor"
 )
 
 func init() {
@@ -21,30 +27,65 @@ var generateCmd = &cobra.Command{
 	Short: "Check dependencies for Composer project in dir.",
 	Args:  cobra.MinimumNArgs(1),
 	Run:   check,
+	//Run:   listFiles,
 }
 
 func check(c *cobra.Command, args []string) {
-	path := args[0]
+	root := args[0]
 
-	imports, exports, err := ResolveImports(path)
+	// TODO: Move this logic to Checker type!
+	// region <<- [ Perform analysis ] ->>
 
+	// (Ensure root is valid as a Composer project)
+	// ... implement this!
+
+	// (Run composer install)
+	// ... implement this!
+
+	vendor, src := filepath.Join(root, vendorDirName), filepath.Join(root, sourceDirName)
+
+	var imports, exports *Names
+	var err error
+
+	// Resolve exports from 'vendor'
+	_, exports, err = ResolveImports(vendor)
 	cmd.CheckError(err)
+
+	// Resolve imports from 'src'
+	imports, _, err = ResolveImports(src)
+	cmd.CheckError(err)
+
+	// Calculate unexported uses
+	//cmd.CheckError(err)
+
+	// endregion [ Perform analysis ]
 
 	p := printer{c}
 
 	// Print uses
-	p.linesWithTitle("Imports (functions):", imports.Functions)
+	//p.linesWithTitle("Imports (functions):", imports.Functions)
 	p.linesWithTitle("Imports (classes):", imports.Classes)
-	p.linesWithTitle("Exports (functions):", exports.Functions)
-	p.linesWithTitle("Exports (classes):", exports.Classes)
+	//p.linesWithTitle("Exports (functions):", exports.Functions)
+	p.linesWithTitle("Exports (classes):", exports.Classes[:10])
 }
 
-func isDir(path string) bool {
-	info, err := os.Stat(path)
+func listFiles(c *cobra.Command, args []string) {
+	root := args[0]
+	//root, err := filepath.Abs(args[0])
+	//cmd.CheckError(err)
 
-	if err != nil {
-		return false
-	}
+	src := filepath.Join(root, sourceDirName)
+	pattern := filepath.Join(root, src, "**/*.php")
 
-	return info.IsDir()
+	p := printer{c}
+
+	printFiles(p, pattern)
+}
+
+func printFiles(p printer, pattern string) {
+	files, err := filepath.Glob(pattern)
+	cmd.CheckError(err)
+
+	p.title(fmt.Sprintf("Files matching [%s]:", pattern))
+	p.lines(files)
 }

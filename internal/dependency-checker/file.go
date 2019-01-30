@@ -56,13 +56,3 @@ func getFileExtPattern(ext string) *regexp.Regexp {
 	// FIXME: Missing tests!
 	return regexp.MustCompile(".*\\." + ext + "$")
 }
-
-func isDir(path string) bool {
-	info, err := os.Stat(path)
-
-	if err != nil {
-		return false
-	}
-
-	return info.IsDir()
-}
