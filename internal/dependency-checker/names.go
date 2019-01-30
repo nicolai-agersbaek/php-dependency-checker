@@ -33,6 +33,14 @@ func (n *Names) Add(fqn string) {
 	}
 }
 
+func (n *Names) Merge(names *Names) *Names {
+	n.Functions = append(n.Functions, names.Constants...)
+	n.Classes = append(n.Classes, names.Constants...)
+	n.Constants = append(n.Constants, names.Constants...)
+
+	return n
+}
+
 func (n *Names) clean() {
 	n.Functions = cleanResolved(n.Functions)
 	n.Classes = cleanResolved(n.Classes)

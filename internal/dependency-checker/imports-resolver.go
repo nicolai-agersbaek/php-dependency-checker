@@ -11,6 +11,7 @@ import (
 	"github.com/z7zmey/php-parser/walker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
+	"path/filepath"
 )
 
 const NamespaceSeparator = "\\"
@@ -279,11 +280,50 @@ func concatNameParts(parts ...[]node.Node) string {
 	return str
 }
 
-func ResolveImports(path string) (*ImportsResolver, error) {
+func ResolveDirImports(dir string) (*Names, *Names, error) {
+	I, E := make([]*Names, 0), make([]*Names, 0)
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			imports, exports, err := ResolveFileImports(path)
+
+			if err != nil {
+				return err
+			}
+
+			I = append(I, imports)
+			E = append(E, exports)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return mergeNames(I), mergeNames(E), nil
+}
+
+func mergeNames(names []*Names) *Names {
+	merged := NewNames()
+
+	for _, n := range names {
+		merged = merged.Merge(n)
+	}
+
+	return merged
+}
+
+func ResolveFileImports(path string) (*Names, *Names, error) {
 	src, err := os.Open(path)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	defer func() {
@@ -306,5 +346,5 @@ func ResolveImports(path string) (*ImportsResolver, error) {
 	rootNode.Walk(resolver)
 	resolver.clean()
 
-	return resolver, nil
+	return resolver.Imports, resolver.Exports, nil
 }

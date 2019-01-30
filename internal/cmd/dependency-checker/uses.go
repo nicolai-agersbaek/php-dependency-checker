@@ -1,7 +1,6 @@
 package dependency_checker
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
@@ -28,16 +27,16 @@ var usesCmd = &cobra.Command{
 }
 
 func imports(c *cobra.Command, args []string) {
-	imports, err := ResolveImports(args[0])
+	imports, exports, err := ResolveFileImports(args[0])
 	cmd.CheckError(err)
 
 	p := printer{c}
 
 	// Print uses
-	p.linesWithTitle("Functions used:", imports.Imports.Functions)
-	p.linesWithTitle("Imports:", imports.Imports.Classes)
-	p.linesWithTitle("Functions provided:", imports.Exports.Functions)
-	p.linesWithTitle("Exports:", imports.Exports.Classes)
+	p.linesWithTitle("Imports (functions):", imports.Functions)
+	p.linesWithTitle("Imports (classes):", imports.Classes)
+	p.linesWithTitle("Exports (functions):", exports.Functions)
+	p.linesWithTitle("Exports (classes):", exports.Classes)
 }
 
 type printer struct {
@@ -62,32 +61,5 @@ func (p *printer) title(title string) {
 func (p *printer) lines(lines []string) {
 	for _, line := range lines {
 		p.c.Println(line)
-	}
-}
-
-func uses(c *cobra.Command, args []string) {
-	// Run the analysis
-	fmt.Println("Analysing files...")
-
-	funcUses, err := ResolveUses(args, IsFunctionName)
-	cmd.CheckError(err)
-
-	clsUses, err := ResolveUses(args, IsClassName)
-	cmd.CheckError(err)
-
-	// Print uses
-	c.Println("----------  FUNCTIONS  ----------")
-	printUses(c, funcUses)
-	c.Println("----------  CLASSES  ----------")
-	printUses(c, clsUses)
-}
-
-func printUses(c *cobra.Command, usesMap ClassUsesMap) {
-	for file, uses := range usesMap {
-		c.Printf("%s:\n", file)
-
-		for _, use := range uses {
-			c.Printf("%s%s\n", indent, use)
-		}
 	}
 }

@@ -1,7 +1,6 @@
 package dependency_checker
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
@@ -20,17 +19,18 @@ var generateCmd = &cobra.Command{
 	Use:   "check <dir>",
 	Short: "Check dependencies for Composer project in dir.",
 	Args:  cobra.MinimumNArgs(1),
-	Run: func(c *cobra.Command, args []string) {
-		// Set the project dir from args
+	Run:   check,
+}
 
-		// Validate the configuration
-		//cmd.CheckError(generate.ValidateConfig(conf))
+func check(c *cobra.Command, args []string) {
+	imports, exports, err := ResolveFileImports(args[0])
+	cmd.CheckError(err)
 
-		// Create a generator that will perform code generation
-		checker := &Checker{Config: conf}
+	p := printer{c}
 
-		// Run the generation using the constructed configuration
-		fmt.Println("Checking files...")
-		cmd.CheckError(checker.Run(args[0]))
-	},
+	// Print uses
+	p.linesWithTitle("Imports (functions):", imports.Functions)
+	p.linesWithTitle("Imports (classes):", imports.Classes)
+	p.linesWithTitle("Exports (functions):", exports.Functions)
+	p.linesWithTitle("Exports (classes):", exports.Classes)
 }
