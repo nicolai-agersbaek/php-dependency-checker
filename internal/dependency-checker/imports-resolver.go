@@ -90,9 +90,6 @@ func (r *ImportsResolver) EnterNode(w walker.Walkable) bool {
 		for _, nn := range n.UseList {
 			r.AddAlias(useType, nn, n.Prefix.(*name.Name).Parts)
 			r.addImport(nn)
-
-			//nsName := r.resolveName(nn)
-			//r.Imports.AddNs(nsName)
 		}
 
 		// no reason to iterate into depth

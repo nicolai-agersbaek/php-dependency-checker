@@ -4,7 +4,8 @@ declare(strict_types = 1);
 
 namespace TestPrj;
 
-use TestPrj\Somebar\SomeCls;
+use TestPrj\SomeBar\SomeCls;
+use TestPrj\Somebar\SomeCls as SomeClsAlias;
 
 /**
  * Class for testing references to namespaces using incorrect case.
@@ -17,9 +18,10 @@ class IncorrectNsCase
 {
     
     /**
-     * @param SomeCls $some
+     * @param SomeClsAlias $some
+     * @param SomeCls      $someCls
      */
-    public function __construct(SomeCls $some)
+    public function __construct(SomeClsAlias $some, SomeCls $someCls)
     {
     }
 }

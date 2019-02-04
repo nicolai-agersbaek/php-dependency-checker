@@ -26,6 +26,9 @@ func check(c *cobra.Command, args []string) {
 
 	p := newPrinter(c)
 
-	p.linesWithTitle("Unexported uses:", diff.Classes)
-	p.linesWithTitle("Unexported uses:", diff.Namespaces)
+	p.linesWithTitle("Imports (namespaces):", imports.Namespaces)
+	p.linesWithTitle("Exports (namespaces):", exports.Namespaces)
+
+	//p.linesWithTitle("Unexported uses (classes):", diff.Classes)
+	p.linesWithTitle("Unexported uses (namespaces):", diff.Namespaces)
 }
