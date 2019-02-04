@@ -10,11 +10,6 @@ import (
 const indent = "  "
 
 func init() {
-	//generateCmd.Flags().BoolVarP(&conf.DryRun, "dry-run", "d", false, "Simulate a run of the generation")
-
-	//generateCmd.Flags().StringVar(&conf.GoOut, "go_out", "", "Output dir for Go files")
-	//cmd.CheckError(generateCmd.MarkFlagRequired("go_out"))
-
 	rootCmd.AddCommand(usesCmd)
 }
 
@@ -22,21 +17,25 @@ var usesCmd = &cobra.Command{
 	Use:   "uses (<dir>|<file>) [(<dir>|<file>)] [,...]",
 	Short: "Resolve class uses for a file or files in a directory.",
 	Args:  cobra.MinimumNArgs(1),
-	//Run: uses,
-	Run: imports,
+	Run:   imports,
 }
 
 func imports(c *cobra.Command, args []string) {
-	imports, exports, err := ResolveImports(args[0])
+	imports, exports, err := ResolveAllImports(args...)
 	cmd.CheckError(err)
 
-	p := printer{c}
+	p := newPrinter(c)
 
 	// Print uses
-	p.linesWithTitle("Imports (functions):", imports.Functions)
-	p.linesWithTitle("Imports (classes):", imports.Classes)
-	p.linesWithTitle("Exports (functions):", exports.Functions)
-	p.linesWithTitle("Exports (classes):", exports.Classes)
+	printUses(p, "Imports", imports)
+	printUses(p, "Exports", exports)
+}
+
+func printUses(p *printer, title string, names *Names) {
+	p.linesWithTitle(title+" (functions):", names.Functions)
+	p.linesWithTitle(title+" (classes):", names.Classes)
+	p.linesWithTitle(title+" (constants):", names.Constants)
+	p.linesWithTitle(title+" (namespaces):", names.Namespaces)
 }
 
 type printer struct {
