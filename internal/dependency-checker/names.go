@@ -25,7 +25,7 @@ static
 parent
 `
 
-var phpNativeTypes = slices.FilterString(strings.Split(phpNativeTypeNames, "\n"), IsEmpty)
+var phpNativeTypes = slices.FilterAllString(strings.Split(phpNativeTypeNames, "\n"), IsEmpty)
 
 type Names struct {
 	Functions []string
@@ -91,7 +91,7 @@ func cleanResolved(resolved []string) []string {
 	// FIXME: Missing tests!
 	resolved = slices.UniqueString(resolved)
 	resolved = removeNativeTypes(resolved)
-	resolved = slices.FilterString(resolved, IsEmpty)
+	resolved = slices.FilterAllString(resolved, IsEmpty)
 
 	return resolved
 }

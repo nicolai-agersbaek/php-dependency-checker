@@ -69,7 +69,7 @@ var nameFilter slices.StringFilter = func(s string) bool {
 
 func (o *cmdOut) append(lines []string) {
 	trimmed := slices.MapString(lines, trim)
-	filtered := slices.FilterString(trimmed, dependency_checker.IsEmpty, nameFilter)
+	filtered := slices.FilterAllString(trimmed, dependency_checker.IsEmpty, nameFilter)
 
 	o.lines = append(o.lines, filtered...)
 }

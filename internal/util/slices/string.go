@@ -40,8 +40,17 @@ func UniqueString(S []string) []string {
 
 type StringFilter func(s string) bool
 
-func FilterString(S []string, filters ...StringFilter) []string {
-	// FIXME: Missing tests!
+func StringFilterNot(filter StringFilter) StringFilter {
+	return func(s string) bool {
+		return !filter(s)
+	}
+}
+
+func FilterString(S []string, filter StringFilter) []string {
+	return FilterAllString(S, filter)
+}
+
+func FilterAllString(S []string, filters ...StringFilter) []string {
 	F := make([]string, 0, len(S))
 
 InputLoop:
@@ -62,12 +71,12 @@ InputLoop:
 type StringMapping func(s string) string
 
 func MapString(S []string, m StringMapping) []string {
-	// FIXME: Missing tests!
-	M := make([]string, 0, len(S))
+	M := make([]string, len(S))
 
 	var i int
 	for _, str := range S {
 		M[i] = m(str)
+		i++
 	}
 
 	return M
