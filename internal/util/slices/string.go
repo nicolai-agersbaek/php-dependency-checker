@@ -81,3 +81,19 @@ func MapString(S []string, m StringMapping) []string {
 
 	return M
 }
+
+func MatchAllString(S []string, filters ...StringFilter) bool {
+	// FIXME: Missing tests!
+	for _, str := range S {
+		// apply filters
+		for _, filter := range filters {
+			// if ANY filter fails, we exit and return false
+			if !filter(str) {
+				return false
+			}
+		}
+	}
+
+	// no filters failed, and all strings in S match all filters
+	return true
+}
