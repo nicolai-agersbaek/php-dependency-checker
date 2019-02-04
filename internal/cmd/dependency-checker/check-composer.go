@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 )
 
 var conf = &Config{
@@ -13,6 +12,7 @@ var conf = &Config{
 }
 
 func init() {
+	checkComposerCmd.Flags().BoolVar(&conf.Install, "install", false, "run composer install.")
 	checkComposerCmd.Flags().StringVar(&conf.SourceDir, "src", "", "name of the source dir.")
 	checkComposerCmd.Flags().StringVar(&conf.VendorDir, "vendor", "", "name of the vendor dir.")
 
@@ -29,6 +29,19 @@ var checkComposerCmd = &cobra.Command{
 func checkComposer(c *cobra.Command, args []string) {
 	root := args[0]
 
+	res, err := analyze(root)
+	cmd.CheckError(err)
+
+	p := newPrinter(c)
+
+	p.linesWithTitle("Unexported uses:", res.UnexportedUses.Namespaces)
+}
+
+type result struct {
+	UnexportedUses *Names
+}
+
+func analyze(root string) (r *result, err error) {
 	// TODO: Move this logic to Checker type!
 	// region <<- [ Perform analysis ] ->>
 
@@ -41,24 +54,25 @@ func checkComposer(c *cobra.Command, args []string) {
 	vendor, src := conf.VendorDirPath(root), conf.SourceDirPath(root)
 
 	var srcImports, srcExports, vendorExports *Names
-	var err error
 
 	// Resolve vendorExports from 'vendor'
 	_, vendorExports, err = ResolveImports(vendor)
-	cmd.CheckError(err)
+
+	if err != nil {
+		return r, err
+	}
 
 	// Resolve srcImports from 'src'
 	srcImports, srcExports, err = ResolveImports(src)
-	cmd.CheckError(err)
+
+	if err != nil {
+		return r, err
+	}
 
 	// Calculate unexported uses
 	// FIXME: Account for built-in names!
 	allExports := vendorExports.Merge(srcExports)
-	diff := slices.DiffString(srcImports.Classes, allExports.Classes)
+	r.UnexportedUses = Diff(srcImports, allExports)
 
-	// endregion [ Perform analysis ]
-
-	p := newPrinter(c)
-
-	p.linesWithTitle("Unexported uses:", diff)
+	return r, err
 }

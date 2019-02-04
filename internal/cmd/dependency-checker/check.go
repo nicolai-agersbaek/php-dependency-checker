@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 )
 
 func init() {
@@ -23,9 +22,10 @@ func check(c *cobra.Command, args []string) {
 	cmd.CheckError(err)
 
 	// Calculate unexported uses
-	diff := slices.DiffString(imports.Classes, exports.Classes)
+	diff := Diff(imports, exports)
 
 	p := newPrinter(c)
 
-	p.linesWithTitle("Unexported uses:", diff)
+	p.linesWithTitle("Unexported uses:", diff.Classes)
+	p.linesWithTitle("Unexported uses:", diff.Namespaces)
 }

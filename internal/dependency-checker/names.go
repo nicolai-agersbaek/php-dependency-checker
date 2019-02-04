@@ -95,15 +95,8 @@ func (n *Names) Merge(names ...*Names) *Names {
 	return n
 }
 
-func (n *Names) clean() {
+func Merge(names []*Names) *Names {
 	// FIXME: Missing tests!
-	n.Functions = cleanResolved(n.Functions)
-	n.Classes = cleanResolved(n.Classes)
-	n.Constants = cleanResolved(n.Constants)
-	n.Namespaces = cleanNamespaces(n.Namespaces)
-}
-
-func mergeNames(names []*Names) *Names {
 	merged := NewNames()
 
 	for _, n := range names {
@@ -111,6 +104,24 @@ func mergeNames(names []*Names) *Names {
 	}
 
 	return merged
+}
+
+func Diff(names1 *Names, names2 *Names) *Names {
+	// FIXME: Missing tests!
+	return &Names{
+		slices.DiffString(names1.Functions, names2.Functions),
+		slices.DiffString(names1.Classes, names2.Classes),
+		slices.DiffString(names1.Constants, names2.Constants),
+		slices.DiffString(names1.Namespaces, names2.Namespaces),
+	}
+}
+
+func (n *Names) clean() {
+	// FIXME: Missing tests!
+	n.Functions = cleanResolved(n.Functions)
+	n.Classes = cleanResolved(n.Classes)
+	n.Constants = cleanResolved(n.Constants)
+	n.Namespaces = cleanNamespaces(n.Namespaces)
 }
 
 func cleanResolved(resolved []string) []string {

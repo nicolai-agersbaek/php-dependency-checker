@@ -10,7 +10,6 @@ import (
 	"github.com/z7zmey/php-parser/php7"
 	"github.com/z7zmey/php-parser/visitor"
 	"github.com/z7zmey/php-parser/walker"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/namespace"
 	"os"
 )
 
@@ -92,8 +91,8 @@ func (r *ImportsResolver) EnterNode(w walker.Walkable) bool {
 			r.AddAlias(useType, nn, n.Prefix.(*name.Name).Parts)
 			r.addImport(nn)
 
-			nsName := r.resolveName(nn)
-			r.Imports.AddNs(nsName)
+			//nsName := r.resolveName(nn)
+			//r.Imports.AddNs(nsName)
 		}
 
 		// no reason to iterate into depth
@@ -273,18 +272,6 @@ func concatNameParts(parts ...[]node.Node) string {
 	return str
 }
 
-func resolveNamespace(parts ...[]node.Node) *namespace.Namespace {
-	nsParts := make([]string, 0)
-
-	for _, p := range parts {
-		for _, n := range p {
-			nsParts = append(nsParts, n.(*name.NamePart).Value)
-		}
-	}
-
-	return namespace.New(nsParts)
-}
-
 func ResolveAllImports(paths ...string) (*Names, *Names, error) {
 	var err error
 	var imports, exports *Names
@@ -306,7 +293,7 @@ func ResolveAllImports(paths ...string) (*Names, *Names, error) {
 		i++
 	}
 
-	return mergeNames(importsAll), mergeNames(exportsAll), err
+	return Merge(importsAll), Merge(exportsAll), err
 }
 
 func ResolveImports(path string) (*Names, *Names, error) {
@@ -339,7 +326,7 @@ func resolveImports(paths ...string) (*Names, *Names, error) {
 		E = append(E, exports)
 	}
 
-	return mergeNames(I), mergeNames(E), nil
+	return Merge(I), Merge(E), nil
 }
 
 func resolveFileImports(path string) (*Names, *Names, error) {

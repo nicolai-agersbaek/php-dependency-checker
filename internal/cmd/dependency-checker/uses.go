@@ -1,13 +1,12 @@
 package dependency_checker
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"strings"
 )
-
-const indent = "  "
 
 func init() {
 	rootCmd.AddCommand(usesCmd)
@@ -32,10 +31,15 @@ func imports(c *cobra.Command, args []string) {
 }
 
 func printUses(p *printer, title string, names *Names) {
-	p.linesWithTitle(title+" (functions):", names.Functions)
-	p.linesWithTitle(title+" (classes):", names.Classes)
-	p.linesWithTitle(title+" (constants):", names.Constants)
-	p.linesWithTitle(title+" (namespaces):", names.Namespaces)
+	printUsesOf(p, title, "functions", names.Functions)
+	printUsesOf(p, title, "classes", names.Classes)
+	printUsesOf(p, title, "constants", names.Constants)
+	printUsesOf(p, title, "namespaces", names.Namespaces)
+}
+
+func printUsesOf(p *printer, title, nameType string, names []string) {
+	t := fmt.Sprintf("%s [%s]:", title, nameType)
+	p.linesWithTitle(t, names)
 }
 
 type printer struct {
@@ -48,6 +52,7 @@ func newPrinter(c *cobra.Command) *printer {
 
 func (p *printer) linesWithTitle(title string, lines []string) {
 	if len(lines) > 0 {
+		title = fmt.Sprintf("%s (%d)", title, len(lines))
 		p.title(title)
 		p.lines(lines)
 	}

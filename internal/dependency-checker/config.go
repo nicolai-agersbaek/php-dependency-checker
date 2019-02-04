@@ -8,6 +8,7 @@ const (
 )
 
 type Config struct {
+	Install              bool
 	SourceDir, VendorDir string
 }
 
