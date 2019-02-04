@@ -6,8 +6,6 @@ import (
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 )
 
-var conf = &Config{}
-
 // FIXME: Fix incomplete descriptions!
 var rootCmd = &cobra.Command{
 	Use:   Name,
