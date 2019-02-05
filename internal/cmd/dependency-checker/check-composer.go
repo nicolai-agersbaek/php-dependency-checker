@@ -32,9 +32,9 @@ func checkComposer(c *cobra.Command, args []string) {
 	res, err := analyze(root)
 	cmd.CheckError(err)
 
-	p := newPrinter(c)
+	p := cmd.NewPrinter(c)
 
-	p.linesWithTitle("Unexported uses:", res.UnexportedUses.Namespaces)
+	p.LinesWithTitle("Unexported uses:", res.UnexportedUses.Namespaces)
 }
 
 type result struct {

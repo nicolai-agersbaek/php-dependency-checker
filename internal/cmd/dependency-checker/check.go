@@ -24,11 +24,13 @@ func check(c *cobra.Command, args []string) {
 	// Calculate unexported uses
 	diff := Diff(imports, exports)
 
-	p := newPrinter(c)
+	p := cmd.NewPrinter(c)
 
-	p.linesWithTitle("Imports (namespaces):", imports.Namespaces)
-	p.linesWithTitle("Exports (namespaces):", exports.Namespaces)
+	const maxLines = 15
 
-	//p.linesWithTitle("Unexported uses (classes):", diff.Classes)
-	p.linesWithTitle("Unexported uses (namespaces):", diff.Namespaces)
+	p.LinesWithTitleMax("Imports (namespaces):", imports.Namespaces, maxLines)
+	p.LinesWithTitleMax("Exports (namespaces):", exports.Namespaces, maxLines)
+
+	//p.linesWithTitleMax("Unexported uses (classes):", diff.Classes, maxLines)
+	p.LinesWithTitleMax("Unexported uses (namespaces):", diff.Namespaces, maxLines)
 }

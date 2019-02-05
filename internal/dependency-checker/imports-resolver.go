@@ -10,6 +10,7 @@ import (
 	"github.com/z7zmey/php-parser/php7"
 	"github.com/z7zmey/php-parser/visitor"
 	"github.com/z7zmey/php-parser/walker"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 )
 
@@ -277,6 +278,7 @@ func ResolveAllImports(paths ...string) (*Names, *Names, error) {
 	exportsAll := make([]*Names, len(paths))
 
 	var i int
+
 	for _, path := range paths {
 		imports, exports, err = ResolveImports(path)
 
@@ -296,7 +298,7 @@ func ResolveAllImports(paths ...string) (*Names, *Names, error) {
 func ResolveImports(path string) (*Names, *Names, error) {
 	var err error
 
-	phpFiles, err := getFilesInDirByExtension("php", path)
+	phpFiles, err := getPhpFiles(path)
 
 	if err != nil {
 		return nil, nil, err
@@ -307,6 +309,23 @@ func ResolveImports(path string) (*Names, *Names, error) {
 	imports, exports, err = resolveImports(phpFiles...)
 
 	return imports, exports, err
+}
+
+func getPhpFiles(paths ...string) ([]string, error) {
+	var files, allFiles []string
+	var err error
+
+	for _, path := range paths {
+		files, err = getFilesInDirByExtension("php", path)
+
+		if err != nil {
+			return nil, err
+		}
+
+		allFiles = append(allFiles, files...)
+	}
+
+	return slices.UniqueString(allFiles), nil
 }
 
 func resolveImports(paths ...string) (*Names, *Names, error) {
