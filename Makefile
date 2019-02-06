@@ -1,3 +1,4 @@
+APP_NAME := "php-dependency-checker"
 PKG_LIST := $(shell go list ./... | grep -v /vendor/)
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
@@ -16,10 +17,9 @@ lint: ## Perform code linting
 
 dep: ## Get the dependencies
 	@go get -v -d ./...
-#	@go get -v -d ${PKG_LIST}
 
 build: dep ## Build the binary file
-	@go build -i -v ./cmd/dependency-checker
+	@go build -i -v ./cmd/${APP_NAME}
 
 install: dep ## Install the binary file
-	@go install -i -v ./cmd/dependency-checker
+	@go install -i -v ./cmd/${APP_NAME}
