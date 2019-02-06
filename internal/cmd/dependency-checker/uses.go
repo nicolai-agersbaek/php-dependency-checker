@@ -19,7 +19,7 @@ var usesCmd = &cobra.Command{
 }
 
 func imports(c *cobra.Command, args []string) {
-	imports, exports, err := ResolveAllImports(args...)
+	imports, exports, err := ResolveImportsSerial(args...)
 	cmd.CheckError(err)
 
 	p := cmd.NewPrinter(c)

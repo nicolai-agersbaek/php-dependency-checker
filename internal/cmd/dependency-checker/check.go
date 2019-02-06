@@ -18,7 +18,7 @@ var checkCmd = &cobra.Command{
 }
 
 func check(c *cobra.Command, args []string) {
-	imports, exports, err := ResolveAllImports(args...)
+	imports, exports, err := ResolveImportsSerial(args...)
 	cmd.CheckError(err)
 
 	// Calculate unexported uses

@@ -2,16 +2,13 @@ package dependency_checker
 
 import (
 	"fmt"
-	"github.com/z7zmey/php-parser/errors"
+	parserErr "github.com/z7zmey/php-parser/errors"
 	"github.com/z7zmey/php-parser/node"
 	"github.com/z7zmey/php-parser/node/expr"
 	"github.com/z7zmey/php-parser/node/name"
 	"github.com/z7zmey/php-parser/node/stmt"
-	"github.com/z7zmey/php-parser/php7"
 	"github.com/z7zmey/php-parser/visitor"
 	"github.com/z7zmey/php-parser/walker"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
-	"os"
 )
 
 const NamespaceSeparator = "\\"
@@ -270,117 +267,9 @@ func concatNameParts(parts ...[]node.Node) string {
 	return str
 }
 
-func ResolveAllImports(paths ...string) (*Names, *Names, error) {
-	var err error
-	var imports, exports *Names
-
-	importsAll := make([]*Names, len(paths))
-	exportsAll := make([]*Names, len(paths))
-
-	var i int
-
-	for _, path := range paths {
-		imports, exports, err = ResolveImports(path)
-
-		if err != nil {
-			return nil, nil, err
-		}
-
-		importsAll[i] = imports
-		exportsAll[i] = exports
-
-		i++
-	}
-
-	return Merge(importsAll), Merge(exportsAll), err
-}
-
-func ResolveImports(path string) (*Names, *Names, error) {
-	var err error
-
-	phpFiles, err := getPhpFiles(path)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var imports, exports *Names
-
-	imports, exports, err = resolveImports(phpFiles...)
-
-	return imports, exports, err
-}
-
-func getPhpFiles(paths ...string) ([]string, error) {
-	var files, allFiles []string
-	var err error
-
-	for _, path := range paths {
-		files, err = getFilesInDirByExtension("php", path)
-
-		if err != nil {
-			return nil, err
-		}
-
-		allFiles = append(allFiles, files...)
-	}
-
-	return slices.UniqueString(allFiles), nil
-}
-
-func resolveImports(paths ...string) (*Names, *Names, error) {
-	I, E := make([]*Names, 0), make([]*Names, 0)
-
-	for _, path := range paths {
-		imports, exports, err := resolveFileImports(path)
-
-		if err != nil {
-			return nil, nil, err
-		}
-
-		I = append(I, imports)
-		E = append(E, exports)
-	}
-
-	return Merge(I), Merge(E), nil
-}
-
-func resolveFileImports(path string) (*Names, *Names, error) {
-	src, err := os.Open(path)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	defer func() {
-		if err := src.Close(); err != nil {
-			panic(err)
-		}
-	}()
-
-	parser := php7.NewParser(src, path)
-	parser.Parse()
-
-	// TODO: Return imports, exports and errors as a combined Result
-	parserErrors := parser.GetErrors()
-
-	resolver := NewImportsResolver()
-
-	if len(parserErrors) > 0 {
-		logParserErrors(path, parser.GetErrors())
-	} else {
-		rootNode := parser.GetRootNode()
-
-		// Resolve imports
-		rootNode.Walk(resolver)
-		resolver.clean()
-	}
-
-	return resolver.Imports, resolver.Exports, nil
-}
-
-func logParserErrors(path string, errors []*errors.Error) {
+func logParserErrors(path string, errors []*parserErr.Error) {
 	indent := "   "
+	fmt.Println()
 	fmt.Println(path, ":")
 
 	for _, e := range errors {

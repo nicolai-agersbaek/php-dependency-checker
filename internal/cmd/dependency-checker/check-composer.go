@@ -56,14 +56,14 @@ func analyze(root string) (r *result, err error) {
 	var srcImports, srcExports, vendorExports *Names
 
 	// Resolve vendorExports from 'vendor'
-	_, vendorExports, err = ResolveImports(vendor)
+	_, vendorExports, err = ResolveImportsSerial(vendor)
 
 	if err != nil {
 		return r, err
 	}
 
 	// Resolve srcImports from 'src'
-	srcImports, srcExports, err = ResolveImports(src)
+	srcImports, srcExports, err = ResolveImportsSerial(src)
 
 	if err != nil {
 		return r, err
