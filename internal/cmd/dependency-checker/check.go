@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	"time"
 )
 
 func init() {
@@ -18,13 +19,20 @@ var checkCmd = &cobra.Command{
 }
 
 func check(c *cobra.Command, args []string) {
+	start := time.Now()
+
 	imports, exports, err := ResolveImportsSerial(args...)
 	cmd.CheckError(err)
 
 	// Calculate unexported uses
 	diff := Diff(imports, exports)
 
+	stop := time.Now()
+	elapsed := stop.Sub(start)
+
 	p := cmd.NewPrinter(c)
+
+	c.Printf("Elapsed: %s\n", elapsed)
 
 	const maxLines = 15
 
