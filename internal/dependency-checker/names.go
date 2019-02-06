@@ -67,12 +67,16 @@ func concatNameParts(parts ...[]node.Node) string {
 type Names struct {
 	Functions  []string
 	Classes    []string
+	Interfaces []string
+	Traits     []string
 	Constants  []string
 	Namespaces []string
 }
 
 func NewNames() *Names {
 	return &Names{
+		make([]string, 0),
+		make([]string, 0),
 		make([]string, 0),
 		make([]string, 0),
 		make([]string, 0),
@@ -108,6 +112,8 @@ func (n *Names) Merge(names ...*Names) *Names {
 	for _, nn := range names {
 		n.Functions = append(n.Functions, nn.Functions...)
 		n.Classes = append(n.Classes, nn.Classes...)
+		n.Interfaces = append(n.Interfaces, nn.Interfaces...)
+		n.Traits = append(n.Traits, nn.Traits...)
 		n.Constants = append(n.Constants, nn.Constants...)
 		n.Namespaces = append(n.Namespaces, nn.Namespaces...)
 	}
@@ -131,15 +137,19 @@ func Diff(names1 *Names, names2 *Names) *Names {
 	return &Names{
 		slices.DiffString(names1.Functions, names2.Functions),
 		slices.DiffString(names1.Classes, names2.Classes),
+		slices.DiffString(names1.Interfaces, names2.Interfaces),
+		slices.DiffString(names1.Traits, names2.Traits),
 		slices.DiffString(names1.Constants, names2.Constants),
 		slices.DiffString(names1.Namespaces, names2.Namespaces),
 	}
 }
 
-func (n *Names) clean() {
+func (n *Names) Clean() {
 	// FIXME: Missing tests!
 	n.Functions = cleanResolved(n.Functions)
 	n.Classes = cleanResolved(n.Classes)
+	n.Interfaces = cleanResolved(n.Interfaces)
+	n.Traits = cleanResolved(n.Traits)
 	n.Constants = cleanResolved(n.Constants)
 	n.Namespaces = cleanNamespaces(n.Namespaces)
 }

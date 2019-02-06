@@ -24,8 +24,8 @@ func NewImportsResolver() *ImportsResolver {
 }
 
 func (r *ImportsResolver) clean() {
-	r.Imports.clean()
-	r.Exports.clean()
+	r.Imports.Clean()
+	r.Exports.Clean()
 }
 
 func (r *ImportsResolver) addImport(n node.Node) {

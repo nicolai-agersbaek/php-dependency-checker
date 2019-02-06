@@ -21,8 +21,8 @@ func ResolveImportsSerial(paths ...string) (*Names, *Names, error) {
 	var imports, exports *Names
 
 	imports, exports, err = resolveImportsSerial(phpFiles...)
-	imports.clean()
-	exports.clean()
+	imports.Clean()
+	exports.Clean()
 
 	return imports, exports, err
 }
