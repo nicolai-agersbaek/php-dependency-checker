@@ -1,6 +1,8 @@
 package dependency_checker
 
 import (
+	"github.com/z7zmey/php-parser/node"
+	"github.com/z7zmey/php-parser/node/name"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"regexp"
 	"strings"
@@ -42,6 +44,24 @@ func anyOfPattern(S []string) string {
 	quoted := slices.MapString(filtered, regexp.QuoteMeta)
 
 	return "^(" + strings.Join(quoted, "|") + ")$"
+}
+
+const NamespaceSeparator = "\\"
+
+func concatNameParts(parts ...[]node.Node) string {
+	str := ""
+
+	for _, p := range parts {
+		for _, n := range p {
+			if str == "" {
+				str = n.(*name.NamePart).Value
+			} else {
+				str = str + NamespaceSeparator + n.(*name.NamePart).Value
+			}
+		}
+	}
+
+	return str
 }
 
 type Names struct {

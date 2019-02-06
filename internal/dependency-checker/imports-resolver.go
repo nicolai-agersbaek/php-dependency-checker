@@ -1,8 +1,6 @@
 package dependency_checker
 
 import (
-	"fmt"
-	parserErr "github.com/z7zmey/php-parser/errors"
 	"github.com/z7zmey/php-parser/node"
 	"github.com/z7zmey/php-parser/node/expr"
 	"github.com/z7zmey/php-parser/node/name"
@@ -10,8 +8,6 @@ import (
 	"github.com/z7zmey/php-parser/visitor"
 	"github.com/z7zmey/php-parser/walker"
 )
-
-const NamespaceSeparator = "\\"
 
 type ImportsResolver struct {
 	visitor.NamespaceResolver
@@ -248,31 +244,5 @@ func (r *ImportsResolver) LeaveNode(w walker.Walkable) {
 		if n.Stmts != nil {
 			r.Namespace = visitor.NewNamespace("")
 		}
-	}
-}
-
-func concatNameParts(parts ...[]node.Node) string {
-	str := ""
-
-	for _, p := range parts {
-		for _, n := range p {
-			if str == "" {
-				str = n.(*name.NamePart).Value
-			} else {
-				str = str + NamespaceSeparator + n.(*name.NamePart).Value
-			}
-		}
-	}
-
-	return str
-}
-
-func logParserErrors(path string, errors []*parserErr.Error) {
-	indent := "   "
-	fmt.Println()
-	fmt.Println(path, ":")
-
-	for _, e := range errors {
-		fmt.Println(indent, e)
 	}
 }
