@@ -10,8 +10,10 @@ import (
 )
 
 type CheckerInput struct {
-	Sources   []string
-	Exporters []string
+	Sources,
+	AdditionalExports,
+	AdditionalImports,
+	Excludes []string
 }
 
 func NewCheckerInput() *CheckerInput {
@@ -20,20 +22,18 @@ func NewCheckerInput() *CheckerInput {
 
 var checkInput = &CheckerInput{}
 
-type checkCommandOptions struct {
-	commandOptions
-}
-
-var checkOptions = &checkCommandOptions{}
-
 func init() {
-	exportsDesc := `Specify the directory in which to search for exports.
-May be specified multiple times.`
-	checkCmd.Flags().StringArrayVar(&checkInput.Exporters, "exports", nil, exportsDesc)
+	additionalExportsDesc := `Directory or file in which to search for additional
+exports. May be specified multiple times.`
+	checkCmd.Flags().StringArrayVarP(&checkInput.AdditionalExports, "exports", "e", nil, additionalExportsDesc)
 
-	checkCmd.Flags().BoolVar(&checkOptions.v, "v", false, "Output additional information.")
-	checkCmd.Flags().BoolVar(&checkOptions.vv, "vv", false, "Output detailed information.")
-	checkCmd.Flags().BoolVar(&checkOptions.vvv, "vvv", false, "Output debug information.")
+	additionalImportsDesc := `Directory or file in which to search for additional
+imports. May be specified multiple times.`
+	checkCmd.Flags().StringArrayVarP(&checkInput.AdditionalImports, "imports", "i", nil, additionalImportsDesc)
+
+	excludeDesc := `Directory or file to exclude from analysis. May be
+specified multiple times.`
+	checkCmd.Flags().StringArrayVarP(&checkInput.Excludes, "exclude", "x", nil, excludeDesc)
 
 	rootCmd.AddCommand(checkCmd)
 }
@@ -48,15 +48,15 @@ var checkCmd = &cobra.Command{
 func check(c *cobra.Command, args []string) {
 	checkInput.Sources = args
 
+	p := getVerbosePrinter(c)
+
 	start := time.Now()
 
 	// Calculate unexported uses.
-	diff := doCheck(checkInput)
+	diff := doCheck(p, checkInput)
 
 	stop := time.Now()
 	elapsed := stop.Sub(start)
-
-	p := cmd.NewVerbosePrinter(cmd.NewPrinter(c), checkOptions.GetVerbosity())
 
 	p.VLine("Elapsed: "+elapsed.String(), cmd.VerbosityNormal)
 
@@ -70,23 +70,36 @@ func check(c *cobra.Command, args []string) {
 	}
 }
 
-func doCheck(input *CheckerInput) *Names {
-	// Resolve srcImports and srcExports from sources.
-	srcImports, srcExports, err := ResolveImportsSerial(input.Sources...)
+func doCheck(p cmd.VerbosePrinter, input *CheckerInput) *Names {
+	// Resolve imports and exports from sources.
+	srcImports, srcExports, err := ResolveImportsSerial(p, input.Sources...)
 	cmd.CheckError(err)
 
-	// Resolve srcExports from specifically provided exporters.
-	_, exports, err := ResolveImportsSerial(input.Exporters...)
+	// Resolve exports from specifically provided exporters.
+	_, additionalExports, err := ResolveImportsSerial(p, input.AdditionalExports...)
 	cmd.CheckError(err)
 
-	// Add built-in names and additional exports to list of available names.
-	srcExports.Merge(names.GetBuiltInNames())
-	srcExports.Merge(exports)
+	// Resolve imports from specifically provided importers.
+	additionalImports, _, err := ResolveImportsSerial(p, input.AdditionalImports...)
+	cmd.CheckError(err)
 
-	srcExports = consolidateIntoClasses(srcExports)
+	// Resolve imports and exports to exclude from analysis.
+	excludedImports, excludedExports, err := ResolveImportsSerial(p, input.Excludes...)
+	cmd.CheckError(err)
+
+	// Combine all analyses.
+	imports := srcImports
+	imports = imports.Merge(additionalImports)
+	imports = imports.Diff(excludedImports)
+	imports = consolidateIntoClasses(imports)
+
+	exports := srcExports
+	exports = exports.Merge(names.GetBuiltInNames(), additionalExports)
+	exports = exports.Diff(excludedExports)
+	exports = consolidateIntoClasses(exports)
 
 	// Calculate unexported uses.
-	return Diff(srcImports, srcExports)
+	return Diff(imports, exports)
 }
 
 func consolidateIntoClasses(n *Names) *Names {

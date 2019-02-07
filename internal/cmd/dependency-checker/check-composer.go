@@ -27,12 +27,10 @@ var checkComposerCmd = &cobra.Command{
 }
 
 func checkComposer(c *cobra.Command, args []string) {
-	root := args[0]
+	p := getVerbosePrinter(c)
 
-	res, err := analyze(root)
+	res, err := analyze(p, args[0])
 	cmd.CheckError(err)
-
-	p := cmd.NewPrinter(c)
 
 	p.LinesWithTitle("Unexported uses:", res.UnexportedUses.Namespaces)
 }
@@ -41,7 +39,7 @@ type result struct {
 	UnexportedUses *Names
 }
 
-func analyze(root string) (r *result, err error) {
+func analyze(p cmd.VerbosePrinter, root string) (r *result, err error) {
 	// TODO: Move this logic to Checker type!
 	// region <<- [ Perform analysis ] ->>
 
@@ -56,14 +54,14 @@ func analyze(root string) (r *result, err error) {
 	var srcImports, srcExports, vendorExports *Names
 
 	// Resolve vendorExports from 'vendor'
-	_, vendorExports, err = ResolveImportsSerial(vendor)
+	_, vendorExports, err = ResolveImportsSerial(p, vendor)
 
 	if err != nil {
 		return r, err
 	}
 
 	// Resolve srcImports from 'src'
-	srcImports, srcExports, err = ResolveImportsSerial(src)
+	srcImports, srcExports, err = ResolveImportsSerial(p, src)
 
 	if err != nil {
 		return r, err

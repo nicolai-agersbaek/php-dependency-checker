@@ -3,16 +3,15 @@ package dependency_checker
 import (
 	"fmt"
 	"github.com/z7zmey/php-parser/php7"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 )
 
-func ResolveImportsSerial(paths ...string) (*Names, *Names, error) {
+func ResolveImportsSerial(p cmd.VerbosePrinter, paths ...string) (*Names, *Names, error) {
 	var err error
 
 	phpFiles, err := getPhpFilesSerial(paths)
-
-	fmt.Printf("Found %d files:\n", len(phpFiles))
 
 	if err != nil {
 		return nil, nil, err
@@ -20,7 +19,7 @@ func ResolveImportsSerial(paths ...string) (*Names, *Names, error) {
 
 	var imports, exports *Names
 
-	imports, exports, err = resolveImportsSerial(phpFiles...)
+	imports, exports, err = resolveImportsSerial(p, phpFiles...)
 	imports.Clean()
 	exports.Clean()
 
@@ -44,13 +43,13 @@ func getPhpFilesSerial(paths []string) ([]string, error) {
 	return slices.UniqueString(allFiles), nil
 }
 
-func resolveImportsSerial(paths ...string) (*Names, *Names, error) {
+func resolveImportsSerial(p cmd.VerbosePrinter, paths ...string) (*Names, *Names, error) {
 	I, E := make([]*Names, 0), make([]*Names, 0)
 
 	var imports, exports *Names
 	var err error
 
-	fmt.Printf("Analyzing %d files...\n", len(paths))
+	p.VLine(fmt.Sprintf("Analyzing %d files...", len(paths)), cmd.VerbosityDebug)
 
 	for _, path := range paths {
 		imports, exports, err = resolveFileImportsSerial(path)

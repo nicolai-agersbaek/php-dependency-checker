@@ -132,6 +132,17 @@ func Merge(names []*Names) *Names {
 	return merged
 }
 
+func (n *Names) Diff(names ...*Names) *Names {
+	// FIXME: Missing tests!
+	diff := n
+
+	for _, nn := range names {
+		diff = Diff(diff, nn)
+	}
+
+	return diff
+}
+
 func Diff(names1 *Names, names2 *Names) *Names {
 	// FIXME: Missing tests!
 	return &Names{

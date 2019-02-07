@@ -1,6 +1,7 @@
 package dependency_checker
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 )
@@ -20,10 +21,12 @@ var listNamesCmd = &cobra.Command{
 func listNames(c *cobra.Command, args []string) {
 	defined := names.GetBuiltInNames()
 
-	c.Printf("Defined functions: %d\n", len(defined.Functions))
-	c.Printf("Defined classes: %d\n", len(defined.Classes))
-	c.Printf("Defined interfaces: %d\n", len(defined.Interfaces))
-	c.Printf("Defined traits: %d\n", len(defined.Traits))
-	c.Printf("Defined constants: %d\n", len(defined.Constants))
-	c.Printf("Defined namespaces: %d\n", len(defined.Namespaces))
+	p := getVerbosePrinter(c)
+
+	p.Line(fmt.Sprintf("Defined functions: %d\n", len(defined.Functions)))
+	p.Line(fmt.Sprintf("Defined classes: %d\n", len(defined.Classes)))
+	p.Line(fmt.Sprintf("Defined interfaces: %d\n", len(defined.Interfaces)))
+	p.Line(fmt.Sprintf("Defined traits: %d\n", len(defined.Traits)))
+	p.Line(fmt.Sprintf("Defined constants: %d\n", len(defined.Constants)))
+	p.Line(fmt.Sprintf("Defined namespaces: %d\n", len(defined.Namespaces)))
 }
