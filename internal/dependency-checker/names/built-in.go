@@ -3,7 +3,6 @@ package names
 import (
 	"fmt"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"io"
 	"os"
@@ -61,7 +60,7 @@ var nameFilter slices.StringFilter = func(s string) bool {
 
 func (o *cmdOut) append(lines []string) {
 	trimmed := slices.MapString(lines, trim)
-	filtered := slices.FilterAllString(trimmed, dependency_checker.IsEmpty, nameFilter)
+	filtered := slices.FilterAllString(trimmed, IsEmpty, nameFilter)
 
 	o.lines = append(o.lines, filtered...)
 }
@@ -95,7 +94,7 @@ var constantsListCode = `
 printLines(getDefinedConstants())
 `
 
-func GetBuiltInNames() *dependency_checker.Names {
+func GetBuiltInNames() *Names {
 	nameTypes := map[string]string{
 		"functions":  "get_defined_functions(true)[\"internal\"]",
 		"classes":    "get_declared_classes()",
@@ -103,7 +102,7 @@ func GetBuiltInNames() *dependency_checker.Names {
 		"interfaces": "get_declared_interfaces()",
 	}
 
-	names := dependency_checker.NewNames()
+	names := NewNames()
 
 	functions := getNames(nameTypes["functions"])
 	classes := getNames(nameTypes["classes"])

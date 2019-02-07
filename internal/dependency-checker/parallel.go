@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/files"
+	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 	"sync"

@@ -1,4 +1,4 @@
-package dependency_checker
+package names
 
 import (
 	"github.com/z7zmey/php-parser/node"
@@ -48,7 +48,7 @@ func anyOfPattern(S []string) string {
 
 const NamespaceSeparator = "\\"
 
-func concatNameParts(parts ...[]node.Node) string {
+func ConcatNameParts(parts ...[]node.Node) string {
 	str := ""
 
 	for _, p := range parts {

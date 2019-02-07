@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 )
 
 var conf = &Config{

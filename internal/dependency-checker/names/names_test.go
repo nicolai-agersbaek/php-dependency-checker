@@ -1,4 +1,4 @@
-package dependency_checker
+package names
 
 import (
 	"testing"

@@ -7,6 +7,7 @@ import (
 	"github.com/z7zmey/php-parser/node/stmt"
 	"github.com/z7zmey/php-parser/visitor"
 	"github.com/z7zmey/php-parser/walker"
+	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 )
 
 type NameResolver struct {
@@ -46,7 +47,7 @@ func (r *NameResolver) resolveName(nn node.Node) string {
 		return r.ResolvedNames[n]
 	}
 
-	return concatNameParts(nameParts)
+	return ConcatNameParts(nameParts)
 }
 
 func (r *NameResolver) EnterNode(w walker.Walkable) bool {
@@ -56,7 +57,7 @@ func (r *NameResolver) EnterNode(w walker.Walkable) bool {
 			r.Namespace = visitor.NewNamespace("")
 		} else {
 			NSParts := n.NamespaceName.(*name.Name).Parts
-			nsName := concatNameParts(NSParts)
+			nsName := ConcatNameParts(NSParts)
 			r.Namespace = visitor.NewNamespace(nsName)
 			r.Exports.AddNs(nsName)
 		}

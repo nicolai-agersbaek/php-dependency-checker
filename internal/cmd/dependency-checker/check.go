@@ -6,7 +6,7 @@ import (
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/checker"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
+	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 	"time"
@@ -100,7 +100,7 @@ func doCheck(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
 	// Combine all analyses.
 	imports = consolidateIntoClasses(imports)
 
-	exports = exports.Merge(names.GetBuiltInNames())
+	exports = exports.Merge(GetBuiltInNames())
 	exports = consolidateIntoClasses(exports)
 
 	// Calculate unexported uses.
@@ -136,7 +136,7 @@ func doCheckBck(p cmd.VerbosePrinter, input *checker.Input) *Names {
 	imports = consolidateIntoClasses(imports)
 
 	exports := srcExports
-	exports = exports.Diff(excludedExports).Merge(names.GetBuiltInNames(), additionalExports)
+	exports = exports.Diff(excludedExports).Merge(GetBuiltInNames(), additionalExports)
 	exports = consolidateIntoClasses(exports)
 
 	// Calculate unexported uses.
