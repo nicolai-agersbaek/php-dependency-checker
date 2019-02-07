@@ -134,7 +134,7 @@ func analyse(path string, results chan<- *Result) error {
 	// TODO: Return imports, exports and parserErr as a combined Result
 	parserErrors := parser.GetErrors()
 
-	resolver := NewImportsResolver()
+	resolver := NewNameResolver()
 
 	if len(parserErrors) > 0 {
 		logParserErrors(path, parser.GetErrors())

@@ -9,34 +9,34 @@ import (
 	"github.com/z7zmey/php-parser/walker"
 )
 
-type ImportsResolver struct {
+type NameResolver struct {
 	visitor.NamespaceResolver
 	Imports *Names
 	Exports *Names
 }
 
-func NewImportsResolver() *ImportsResolver {
-	return &ImportsResolver{
+func NewNameResolver() *NameResolver {
+	return &NameResolver{
 		*visitor.NewNamespaceResolver(),
 		NewNames(),
 		NewNames(),
 	}
 }
 
-func (r *ImportsResolver) clean() {
+func (r *NameResolver) clean() {
 	r.Imports.Clean()
 	r.Exports.Clean()
 }
 
-func (r *ImportsResolver) addImport(n node.Node) {
+func (r *NameResolver) addImport(n node.Node) {
 	r.Imports.Add(r.resolveName(n))
 }
 
-func (r *ImportsResolver) addExport(n node.Node) {
+func (r *NameResolver) addExport(n node.Node) {
 	r.Exports.Add(r.resolveName(n))
 }
 
-func (r *ImportsResolver) resolveName(nn node.Node) string {
+func (r *NameResolver) resolveName(nn node.Node) string {
 	var nameParts []node.Node
 
 	switch n := nn.(type) {
@@ -49,7 +49,7 @@ func (r *ImportsResolver) resolveName(nn node.Node) string {
 	return concatNameParts(nameParts)
 }
 
-func (r *ImportsResolver) EnterNode(w walker.Walkable) bool {
+func (r *NameResolver) EnterNode(w walker.Walkable) bool {
 	switch n := w.(type) {
 	case *stmt.Namespace:
 		if n.NamespaceName == nil {
@@ -233,12 +233,12 @@ func (r *ImportsResolver) EnterNode(w walker.Walkable) bool {
 }
 
 // GetChildrenVisitor is invoked at every node parameter that contains children nodes
-func (r *ImportsResolver) GetChildrenVisitor(key string) walker.Visitor {
+func (r *NameResolver) GetChildrenVisitor(key string) walker.Visitor {
 	return r
 }
 
 // LeaveNode is invoked after node process
-func (r *ImportsResolver) LeaveNode(w walker.Walkable) {
+func (r *NameResolver) LeaveNode(w walker.Walkable) {
 	switch n := w.(type) {
 	case *stmt.Namespace:
 		if n.Stmts != nil {
