@@ -1,0 +1,68 @@
+stages:
+    - test
+    - build
+    - artifact
+
+test:
+    stage: test
+    image: golang
+    cache:
+        paths:
+            - /apt-cache
+            - /go/src/github.com
+            - /go/src/golang.org
+            - /go/src/google.golang.org
+            - /go/src/gopkg.in
+    script:
+        - mkdir -p /go/src/gitlab.zitcom.dk/smartweb/proj
+        - mkdir -p /go/src/_/builds/smartweb/proj/php-dependency-checker
+        - cp -r $CI_PROJECT_DIR /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker
+        - ln -s /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker /go/src/_/builds/smartweb/proj/php-dependency-checker
+        - cd /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker
+        - make test
+
+build:
+    stage: build
+    image: golang
+    cache:
+        paths:
+            - /apt-cache
+            - /go/src/github.com
+            - /go/src/golang.org
+            - /go/src/google.golang.org
+            - /go/src/gopkg.in
+    script:
+        - mkdir -p /go/src/gitlab.zitcom.dk/smartweb/proj
+        - mkdir -p /go/src/_/builds/smartweb/proj/php-dependency-checker
+        - cp -r $CI_PROJECT_DIR /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker
+        - ln -s /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker /go/src/_/builds/smartweb/proj/php-dependency-checker
+        - cd /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker
+        - make build
+    artifacts:
+        paths:
+            - php-dependency-checker
+        expire_in: 1 day
+
+artifact:branch:
+    stage: artifact
+    image:
+        name: cgswong/aws:aws
+        entrypoint: [""]
+    script:
+        - "aws s3 cp php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
+    dependencies:
+        - build
+    when: manual
+
+artifact:latest:
+    stage: artifact
+    image:
+        name: cgswong/aws:aws
+        entrypoint: [""]
+    script:
+        - 'aws s3 cp php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-latest'
+        - "aws s3 cp php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
+    dependencies:
+        - build
+    only:
+        - master
