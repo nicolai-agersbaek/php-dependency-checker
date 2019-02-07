@@ -2,7 +2,9 @@ package dependency_checker
 
 import (
 	"fmt"
+	"github.com/z7zmey/php-parser/errors"
 	"github.com/z7zmey/php-parser/php7"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/files"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
@@ -10,43 +12,160 @@ import (
 	"sync"
 )
 
-type Result struct {
-	imports, exports *Names
-	err              error
-}
-
-func NewResult(imports *Names, exports *Names, err error) *Result {
-	return &Result{imports: imports, exports: exports, err: err}
-}
-
-func (r *Result) Merge(result *Result) {
-	if result.err != nil {
-		r.err = result.err
-	}
-
-	r.imports.Merge(result.imports)
-	r.exports.Merge(result.exports)
-}
-
-func ResolveImportsParallel(paths ...string) (*Names, *Names, error) {
+func ResolveNamesParallel(p cmd.VerbosePrinter, importPaths, exportPaths []string) (FileNames, FileNames, error) {
 	var err error
 
-	F := make(chan string)
-	phpFiles, err := getPhpFilesParallel(F, paths)
-
-	fmt.Printf("Found %d files:\n", len(phpFiles))
+	importFiles, exportFiles, err := resolveFiles(importPaths, exportPaths)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var imports, exports *Names
+	I, E, B := partitionFileSets(importFiles, exportFiles)
 
-	imports, exports, err = resolveImportsParallel(phpFiles...)
-	imports.Clean()
-	exports.Clean()
+	numFiles := len(I) + len(E) + len(B)
+	if numFiles > 0 {
+		p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
+	}
+
+	const maxConcurrentFiles = 20
+
+	filesChan := make(chan string, maxConcurrentFiles)
+	resultsChan := make(chan *FileAnalysis)
+	errChan := make(chan error)
+
+	var wg sync.WaitGroup
+	wg.Add(numFiles)
+
+	// Start broadcasting paths
+	go broadcast(I, filesChan)
+	go broadcast(E, filesChan)
+	go broadcast(B, filesChan)
+
+	// Start analyses
+	go func() {
+		for f := range filesChan {
+			analyze(f, resultsChan, errChan, p)
+			wg.Done()
+		}
+	}()
+
+	done := make(chan bool)
+
+	go func() {
+		wg.Wait()
+		done <- true
+	}()
+
+	// Collect analyses
+	imports := make(FileNames)
+	exports := make(FileNames)
+
+	select {
+	case <-done:
+	case err = <-errChan:
+	case r := <-resultsChan:
+		r.Imports.Clean()
+		imports[r.Path] = r.Imports
+
+		r.Exports.Clean()
+		exports[r.Path] = r.Exports
+	}
+
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return imports, exports, err
+}
+
+func broadcast(F []string, c chan<- string) {
+	for _, f := range F {
+		c <- f
+	}
+}
+
+func analyze(file string, results chan<- *FileAnalysis, errs chan<- error, p cmd.VerbosePrinter) {
+	I, E, err := analyzeFile(file, p)
+
+	if err != nil {
+		//errs <- err
+		panic(err)
+	}
+
+	results <- NewFileAnalysis(file, I, E)
+}
+
+func analyzeFile(path string, p cmd.VerbosePrinter) (*Names, *Names, error) {
+	src, err := os.Open(path)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	defer func() {
+		if err := src.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	parser := php7.NewParser(src, path)
+	parser.Parse()
+
+	// TODO: Return imports, exports and parserErr as a combined Result
+	parserErrors := parser.GetErrors()
+
+	resolver := NewNameResolver()
+
+	if len(parserErrors) > 0 {
+		logParserErrorsV(path, parser.GetErrors(), p)
+	} else {
+		rootNode := parser.GetRootNode()
+
+		// Resolve imports
+		rootNode.Walk(resolver)
+		resolver.clean()
+	}
+
+	return resolver.Imports, resolver.Exports, nil
+}
+
+func logParserErrorsV(path string, errors []*errors.Error, p cmd.VerbosePrinter) {
+	indent := "   "
+	p.Line("")
+	p.Line(path + ":")
+
+	for _, e := range errors {
+		p.Line(indent + e.String())
+	}
+}
+
+func resolveFiles(importPaths, exportPaths []string) ([]string, []string, error) {
+	// Resolve the files given by import and export paths
+	P := make([][]string, 2, 2)
+
+	for k, paths := range [][]string{importPaths, exportPaths} {
+		F, err := getPhpFilesSerial(paths)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		P[k] = slices.UniqueString(F)
+	}
+
+	return P[0], P[1], nil
+}
+
+// partitionFileSets partitions importFiles and exportFiles into disjunct sets I,
+// E and B, representing the files to be imported, exported and both, respectively.
+func partitionFileSets(importFiles, exportFiles []string) (I, E, B []string) {
+	// FIXME: Missing tests!
+	I = slices.DiffString(importFiles, exportFiles)
+	E = slices.DiffString(exportFiles, importFiles)
+	B = slices.IntersectionString(importFiles, exportFiles)
+
+	return I, E, B
 }
 
 func getPhpFilesParallel(F chan<- string, paths []string) ([]string, error) {
@@ -74,80 +193,4 @@ func getPhpFilesParallel(F chan<- string, paths []string) ([]string, error) {
 	}()
 
 	return nil, nil
-}
-
-func resolveImportsParallel(paths ...string) (*Names, *Names, error) {
-	I, E := make([]*Names, 0), make([]*Names, 0)
-
-	const maxResolvers = 10
-	results := make(chan *Result, maxResolvers)
-
-	var wg sync.WaitGroup
-
-	fmt.Printf("Analyzing %d files...\n", len(paths))
-	wg.Add(len(paths))
-
-	for _, path := range paths {
-		go doAnalyse(path, results, &wg)
-	}
-
-	go func() {
-		for r := range results {
-			fmt.Print(".")
-
-			I = append(I, r.imports)
-			E = append(E, r.exports)
-		}
-	}()
-
-	wg.Wait()
-	close(results)
-
-	fmt.Println()
-
-	return Merge(I), Merge(E), nil
-}
-
-func doAnalyse(path string, results chan<- *Result, wg *sync.WaitGroup) {
-	err := analyse(path, results)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	wg.Done()
-}
-
-func analyse(path string, results chan<- *Result) error {
-	src, err := os.Open(path)
-
-	if err != nil {
-		return err
-	}
-
-	parser := php7.NewParser(src, path)
-	parser.Parse()
-
-	if err := src.Close(); err != nil {
-		panic(err)
-	}
-
-	// TODO: Return imports, exports and parserErr as a combined Result
-	parserErrors := parser.GetErrors()
-
-	resolver := NewNameResolver()
-
-	if len(parserErrors) > 0 {
-		logParserErrors(path, parser.GetErrors())
-	} else {
-		rootNode := parser.GetRootNode()
-
-		// Resolve imports
-		rootNode.Walk(resolver)
-		resolver.clean()
-	}
-
-	results <- NewResult(resolver.Imports, resolver.Exports, nil)
-
-	return nil
 }

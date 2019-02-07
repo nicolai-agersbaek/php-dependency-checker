@@ -60,7 +60,7 @@ func check(c *cobra.Command, args []string) {
 	start := time.Now()
 
 	// Calculate unexported uses.
-	diff := getCheckFunc(p)(p, importPaths, exportPaths)
+	diff := getCheckFunc(parallelMode)(p, importPaths, exportPaths)
 
 	elapsed := time.Now().Sub(start)
 
@@ -96,10 +96,9 @@ func formatDuration(d time.Duration) string {
 
 type checkFunc func(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names
 
-func getCheckFunc(p cmd.VerbosePrinter) checkFunc {
-	if parallelMode {
-		p.Line("Error: parallel name resolution not yet implemented!")
-		os.Exit(1)
+func getCheckFunc(inParallel bool) checkFunc {
+	if inParallel {
+		return checkParallel
 	}
 
 	return checkSerial
@@ -107,6 +106,21 @@ func getCheckFunc(p cmd.VerbosePrinter) checkFunc {
 
 func checkSerial(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
 	I, E, err := ResolveNamesSerial(p, importPaths, exportPaths)
+	cmd.CheckError(err)
+
+	// Combine all analyses.
+	imports := consolidateIntoClasses(convertToNames(I))
+
+	exports := convertToNames(E)
+	exports = exports.Merge(GetBuiltInNames())
+	exports = consolidateIntoClasses(exports)
+
+	// Calculate unexported uses.
+	return Diff(imports, exports)
+}
+
+func checkParallel(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
+	I, E, err := ResolveNamesParallel(p, importPaths, exportPaths)
 	cmd.CheckError(err)
 
 	// Combine all analyses.

@@ -98,6 +98,33 @@ func DiffString(A, B []string) []string {
 	return C
 }
 
+// IntersectionString returns the intersection of elements in the two slices A
+// and B. Thus, I = { i | i ∈ A ^ i ∈ B}.
+func IntersectionString(A, B []string) []string {
+	// FIXME: Missing tests!
+	M := make(map[string]bool, len(A))
+
+	for _, a := range A {
+		M[a] = true
+	}
+
+	for _, b := range B {
+		if _, ok := M[b]; !ok {
+			M[b] = false
+		}
+	}
+
+	I := make([]string, 0)
+
+	for m, ok := range M {
+		if ok {
+			I = append(I, m)
+		}
+	}
+
+	return I
+}
+
 func UniqueString(S []string) []string {
 	U := make([]string, 0, len(S))
 	M := make(map[string]bool, len(S))
