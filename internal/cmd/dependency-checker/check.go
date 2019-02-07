@@ -5,6 +5,7 @@ import (
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 	"time"
 )
@@ -90,7 +91,8 @@ func doCheck(p cmd.VerbosePrinter, input *CheckerInput) *Names {
 	cmd.CheckError(err)
 
 	// Resolve excluded exports from specifically provided exporters.
-	_, excludedExports, err := ResolveImportsSerial(p, input.ExcludedExports...)
+	excludedExportPaths := append(input.ExcludedExports, input.Excludes...)
+	_, excludedExports, err := ResolveImportsSerial(p, slices.UniqueString(excludedExportPaths)...)
 	cmd.CheckError(err)
 
 	// Resolve imports from specifically provided importers.
@@ -98,20 +100,17 @@ func doCheck(p cmd.VerbosePrinter, input *CheckerInput) *Names {
 	cmd.CheckError(err)
 
 	// Resolve excluded imports from specifically provided importers.
-	excludedImports, _, err := ResolveImportsSerial(p, input.ExcludedImports...)
-	cmd.CheckError(err)
-
-	// Resolve imports and exports to exclude from analysis.
-	alsoExcludedImports, alsoExcludedExports, err := ResolveImportsSerial(p, input.Excludes...)
+	excludedImportPaths := append(input.ExcludedImports, input.Excludes...)
+	excludedImports, _, err := ResolveImportsSerial(p, slices.UniqueString(excludedImportPaths)...)
 	cmd.CheckError(err)
 
 	// Combine all analyses.
 	imports := srcImports
-	imports = imports.Diff(excludedImports, alsoExcludedImports).Merge(additionalImports)
+	imports = imports.Diff(excludedImports).Merge(additionalImports)
 	imports = consolidateIntoClasses(imports)
 
 	exports := srcExports
-	exports = exports.Diff(excludedExports, alsoExcludedExports).Merge(names.GetBuiltInNames(), additionalExports)
+	exports = exports.Diff(excludedExports).Merge(names.GetBuiltInNames(), additionalExports)
 	exports = consolidateIntoClasses(exports)
 
 	// Calculate unexported uses.
