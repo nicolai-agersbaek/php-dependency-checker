@@ -19,8 +19,9 @@ func ResolveImportsSerial(p cmd.VerbosePrinter, paths ...string) (*Names, *Names
 
 	var imports, exports *Names
 
-	if len(paths) > 0 {
-		p.VLine(fmt.Sprintf("Analyzing %d files...", len(paths)), cmd.VerbosityDetailed)
+	numFiles := len(phpFiles)
+	if numFiles > 0 {
+		p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
 	}
 
 	imports, exports, err = resolveImportsSerial(p, phpFiles...)

@@ -11,9 +11,11 @@ import (
 
 type CheckerInput struct {
 	Sources,
+	Excludes,
 	AdditionalExports,
+	ExcludedExports,
 	AdditionalImports,
-	Excludes []string
+	ExcludedImports []string
 }
 
 func NewCheckerInput() *CheckerInput {
@@ -23,17 +25,25 @@ func NewCheckerInput() *CheckerInput {
 var checkInput = &CheckerInput{}
 
 func init() {
+	excludeDesc := `Directory or file to exclude from analysis. May be
+specified multiple times.`
+	checkCmd.Flags().StringArrayVarP(&checkInput.Excludes, "exclude", "x", nil, excludeDesc)
+
 	additionalExportsDesc := `Directory or file in which to search for additional
 exports. May be specified multiple times.`
 	checkCmd.Flags().StringArrayVarP(&checkInput.AdditionalExports, "exports", "e", nil, additionalExportsDesc)
+
+	excludedExportsDesc := `Directory or file to exclude exports from. May be
+specified multiple times.`
+	checkCmd.Flags().StringArrayVarP(&checkInput.ExcludedExports, "exclude-exports", "E", nil, excludedExportsDesc)
 
 	additionalImportsDesc := `Directory or file in which to search for additional
 imports. May be specified multiple times.`
 	checkCmd.Flags().StringArrayVarP(&checkInput.AdditionalImports, "imports", "i", nil, additionalImportsDesc)
 
-	excludeDesc := `Directory or file to exclude from analysis. May be
+	excludedImportsDesc := `Directory or file to exclude imports from. May be
 specified multiple times.`
-	checkCmd.Flags().StringArrayVarP(&checkInput.Excludes, "exclude", "x", nil, excludeDesc)
+	checkCmd.Flags().StringArrayVarP(&checkInput.ExcludedImports, "exclude-imports", "I", nil, excludedImportsDesc)
 
 	rootCmd.AddCommand(checkCmd)
 }
@@ -79,23 +89,29 @@ func doCheck(p cmd.VerbosePrinter, input *CheckerInput) *Names {
 	_, additionalExports, err := ResolveImportsSerial(p, input.AdditionalExports...)
 	cmd.CheckError(err)
 
+	// Resolve excluded exports from specifically provided exporters.
+	_, excludedExports, err := ResolveImportsSerial(p, input.ExcludedExports...)
+	cmd.CheckError(err)
+
 	// Resolve imports from specifically provided importers.
 	additionalImports, _, err := ResolveImportsSerial(p, input.AdditionalImports...)
 	cmd.CheckError(err)
 
+	// Resolve excluded imports from specifically provided importers.
+	excludedImports, _, err := ResolveImportsSerial(p, input.ExcludedImports...)
+	cmd.CheckError(err)
+
 	// Resolve imports and exports to exclude from analysis.
-	excludedImports, excludedExports, err := ResolveImportsSerial(p, input.Excludes...)
+	alsoExcludedImports, alsoExcludedExports, err := ResolveImportsSerial(p, input.Excludes...)
 	cmd.CheckError(err)
 
 	// Combine all analyses.
 	imports := srcImports
-	imports = imports.Diff(excludedImports)
-	imports = imports.Merge(additionalImports)
+	imports = imports.Diff(excludedImports, alsoExcludedImports).Merge(additionalImports)
 	imports = consolidateIntoClasses(imports)
 
 	exports := srcExports
-	exports = exports.Diff(excludedExports)
-	exports = exports.Merge(names.GetBuiltInNames(), additionalExports)
+	exports = exports.Diff(excludedExports, alsoExcludedExports).Merge(names.GetBuiltInNames(), additionalExports)
 	exports = consolidateIntoClasses(exports)
 
 	// Calculate unexported uses.
