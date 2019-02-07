@@ -89,13 +89,13 @@ func doCheck(p cmd.VerbosePrinter, input *CheckerInput) *Names {
 
 	// Combine all analyses.
 	imports := srcImports
-	imports = imports.Merge(additionalImports)
 	imports = imports.Diff(excludedImports)
+	imports = imports.Merge(additionalImports)
 	imports = consolidateIntoClasses(imports)
 
 	exports := srcExports
-	exports = exports.Merge(names.GetBuiltInNames(), additionalExports)
 	exports = exports.Diff(excludedExports)
+	exports = exports.Merge(names.GetBuiltInNames(), additionalExports)
 	exports = consolidateIntoClasses(exports)
 
 	// Calculate unexported uses.

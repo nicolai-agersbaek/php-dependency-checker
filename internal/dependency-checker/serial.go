@@ -19,6 +19,10 @@ func ResolveImportsSerial(p cmd.VerbosePrinter, paths ...string) (*Names, *Names
 
 	var imports, exports *Names
 
+	if len(paths) > 0 {
+		p.VLine(fmt.Sprintf("Analyzing %d files...", len(paths)), cmd.VerbosityDetailed)
+	}
+
 	imports, exports, err = resolveImportsSerial(p, phpFiles...)
 	imports.Clean()
 	exports.Clean()
@@ -49,10 +53,8 @@ func resolveImportsSerial(p cmd.VerbosePrinter, paths ...string) (*Names, *Names
 	var imports, exports *Names
 	var err error
 
-	p.VLine(fmt.Sprintf("Analyzing %d files...", len(paths)), cmd.VerbosityDebug)
-
 	for _, path := range paths {
-		imports, exports, err = resolveFileImportsSerial(path)
+		imports, exports, err = resolveFileImportsSerial(path, p.GetVerbosity())
 
 		if err != nil {
 			return nil, nil, err
@@ -65,7 +67,7 @@ func resolveImportsSerial(p cmd.VerbosePrinter, paths ...string) (*Names, *Names
 	return Merge(I), Merge(E), nil
 }
 
-func resolveFileImportsSerial(path string) (*Names, *Names, error) {
+func resolveFileImportsSerial(path string, v cmd.Verbosity) (*Names, *Names, error) {
 	src, err := os.Open(path)
 
 	if err != nil {
@@ -86,7 +88,7 @@ func resolveFileImportsSerial(path string) (*Names, *Names, error) {
 
 	resolver := NewImportsResolver()
 
-	if len(parserErrors) > 0 {
+	if v >= cmd.VerbosityDebug && len(parserErrors) > 0 {
 		logParserErrors(path, parser.GetErrors())
 	} else {
 		rootNode := parser.GetRootNode()
