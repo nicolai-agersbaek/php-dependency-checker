@@ -1,29 +1,18 @@
 package dependency_checker
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 	"time"
 )
 
-type CheckerInput struct {
-	Sources,
-	Excludes,
-	AdditionalExports,
-	ExcludedExports,
-	AdditionalImports,
-	ExcludedImports []string
-}
-
-func NewCheckerInput() *CheckerInput {
-	return &CheckerInput{}
-}
-
-var checkInput = &CheckerInput{}
+var checkInput = &checker.Input{}
 
 func init() {
 	excludeDesc := `Directory or file to exclude from analysis. May be
@@ -59,17 +48,21 @@ var checkCmd = &cobra.Command{
 func check(c *cobra.Command, args []string) {
 	checkInput.Sources = args
 
+	// Resolve files to analyze
+	importPaths := checkInput.ImportPaths()
+	exportPaths := checkInput.ExportPaths()
+
 	p := getVerbosePrinter(c)
 
 	start := time.Now()
 
 	// Calculate unexported uses.
-	diff := doCheck(p, checkInput)
+	diff := doCheck(p, importPaths, exportPaths)
 
-	stop := time.Now()
-	elapsed := stop.Sub(start)
+	elapsed := time.Now().Sub(start)
 
-	p.VLine("Elapsed: "+elapsed.String(), cmd.VerbosityNormal)
+	avgDuration := elapsed / time.Duration(len(importPaths)+len(exportPaths))
+	p.VLine(fmt.Sprintf("Elapsed: %s (avg. %s)", elapsed.String(), formatDuration(avgDuration)), cmd.VerbosityNormal)
 
 	const maxLines = 15
 
@@ -81,7 +74,40 @@ func check(c *cobra.Command, args []string) {
 	}
 }
 
-func doCheck(p cmd.VerbosePrinter, input *CheckerInput) *Names {
+func formatDuration(d time.Duration) string {
+	suffix := "ns"
+
+	if d > time.Second {
+		d = d / time.Second
+		suffix = "s"
+	} else if d > 10*time.Millisecond {
+		d = d / time.Millisecond
+		suffix = "ms"
+	} else if d > 10*time.Microsecond {
+		d = d / time.Microsecond
+		suffix = "μs"
+	}
+
+	return fmt.Sprintf("%d"+suffix, d)
+}
+
+func doCheck(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
+	imports, _, err := ResolveImportsSerial(p, importPaths...)
+	cmd.CheckError(err)
+	_, exports, err := ResolveImportsSerial(p, exportPaths...)
+	cmd.CheckError(err)
+
+	// Combine all analyses.
+	imports = consolidateIntoClasses(imports)
+
+	exports = exports.Merge(names.GetBuiltInNames())
+	exports = consolidateIntoClasses(exports)
+
+	// Calculate unexported uses.
+	return Diff(imports, exports)
+}
+
+func doCheckBck(p cmd.VerbosePrinter, input *checker.Input) *Names {
 	// Resolve imports and exports from sources.
 	srcImports, srcExports, err := ResolveImportsSerial(p, input.Sources...)
 	cmd.CheckError(err)

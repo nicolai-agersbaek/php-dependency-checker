@@ -112,6 +112,23 @@ func UniqueString(S []string) []string {
 	return U
 }
 
+func UniqueStrings(Ss ...[]string) []string {
+	// FIXME: Missing tests!
+	U := make([]string, 0)
+	M := make(map[string]bool, 0)
+
+	for _, S := range Ss {
+		for _, s := range S {
+			if _, ok := M[s]; !ok {
+				U = append(U, s)
+				M[s] = true
+			}
+		}
+	}
+
+	return U
+}
+
 type StringFilter func(s string) bool
 
 func StringFilterNot(filter StringFilter) StringFilter {

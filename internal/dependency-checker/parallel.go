@@ -3,6 +3,7 @@ package dependency_checker
 import (
 	"fmt"
 	"github.com/z7zmey/php-parser/php7"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/files"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 	"sync"
@@ -48,25 +49,25 @@ func ResolveImportsParallel(paths ...string) (*Names, *Names, error) {
 }
 
 func getPhpFilesParallel(F chan<- string, paths []string) ([]string, error) {
-	var files, allFiles []string
+	var fs, Fs []string
 	var err error
 
 	for _, path := range paths {
-		files, err = getFilesInDirByExtension("php", path)
+		fs, err = files.GetFilesInDirByExtension("php", path)
 
 		if err != nil {
 			return nil, err
 		}
 
-		allFiles = append(allFiles, files...)
+		Fs = append(Fs, fs...)
 	}
 
-	allFiles = slices.UniqueString(allFiles)
+	Fs = slices.UniqueString(Fs)
 
 	go func() {
 		defer close(F)
 
-		for _, f := range allFiles {
+		for _, f := range Fs {
 			F <- f
 		}
 	}()

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/files"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 )
@@ -32,20 +33,20 @@ func ResolveImportsSerial(p cmd.VerbosePrinter, paths ...string) (*Names, *Names
 }
 
 func getPhpFilesSerial(paths []string) ([]string, error) {
-	var files, allFiles []string
+	var fs, Fs []string
 	var err error
 
 	for _, path := range paths {
-		files, err = getFilesInDirByExtension("php", path)
+		fs, err = files.GetFilesInDirByExtension("php", path)
 
 		if err != nil {
 			return nil, err
 		}
 
-		allFiles = append(allFiles, files...)
+		Fs = append(Fs, fs...)
 	}
 
-	return slices.UniqueString(allFiles), nil
+	return slices.UniqueString(Fs), nil
 }
 
 func resolveImportsSerial(p cmd.VerbosePrinter, paths ...string) (*Names, *Names, error) {

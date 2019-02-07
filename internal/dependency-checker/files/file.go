@@ -1,4 +1,4 @@
-package dependency_checker
+package files
 
 import (
 	"os"
@@ -6,12 +6,12 @@ import (
 	"regexp"
 )
 
-func getFilesByExtension(ext string, paths ...string) ([]string, error) {
+func GetFilesByExtension(ext string, paths ...string) ([]string, error) {
 	// FIXME: Missing tests!
 	F := make([]string, 0)
 
 	for _, path := range paths {
-		files, err := getFilesInDirByExtension(ext, path)
+		files, err := GetFilesInDirByExtension(ext, path)
 
 		if err != nil {
 			return nil, err
@@ -23,7 +23,7 @@ func getFilesByExtension(ext string, paths ...string) ([]string, error) {
 	return F, nil
 }
 
-func getFilesInDirByExtension(ext, dir string) ([]string, error) {
+func GetFilesInDirByExtension(ext, dir string) ([]string, error) {
 	// FIXME: Missing tests!
 	var files []string
 
