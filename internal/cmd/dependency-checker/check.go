@@ -7,12 +7,13 @@ import (
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/checker"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 	"time"
 )
 
 var checkInput = &checker.Input{}
+
+var parallelMode = false
 
 func init() {
 	excludeDesc := `Directory or file to exclude from analysis. May be
@@ -34,6 +35,8 @@ imports. May be specified multiple times.`
 	excludedImportsDesc := `Directory or file to exclude imports from. May be
 specified multiple times.`
 	checkCmd.Flags().StringArrayVarP(&checkInput.ExcludedImports, "exclude-imports", "I", nil, excludedImportsDesc)
+
+	checkCmd.Flags().BoolVarP(&parallelMode, "parallel", "p", false, "Perform parallel name resolution.")
 
 	rootCmd.AddCommand(checkCmd)
 }
@@ -57,7 +60,7 @@ func check(c *cobra.Command, args []string) {
 	start := time.Now()
 
 	// Calculate unexported uses.
-	diff := doCheck(p, importPaths, exportPaths)
+	diff := getCheckFunc(p)(p, importPaths, exportPaths)
 
 	elapsed := time.Now().Sub(start)
 
@@ -91,15 +94,25 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%d"+suffix, d)
 }
 
-func doCheck(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
-	imports, _, err := ResolveImportsSerial(p, importPaths...)
-	cmd.CheckError(err)
-	_, exports, err := ResolveImportsSerial(p, exportPaths...)
+type checkFunc func(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names
+
+func getCheckFunc(p cmd.VerbosePrinter) checkFunc {
+	if parallelMode {
+		p.Line("Error: parallel name resolution not yet implemented!")
+		os.Exit(1)
+	}
+
+	return checkSerial
+}
+
+func checkSerial(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
+	I, E, err := ResolveNamesSerial(p, importPaths, exportPaths)
 	cmd.CheckError(err)
 
 	// Combine all analyses.
-	imports = consolidateIntoClasses(imports)
+	imports := consolidateIntoClasses(convertToNames(I))
 
+	exports := convertToNames(E)
 	exports = exports.Merge(GetBuiltInNames())
 	exports = consolidateIntoClasses(exports)
 
@@ -107,40 +120,16 @@ func doCheck(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
 	return Diff(imports, exports)
 }
 
-func doCheckBck(p cmd.VerbosePrinter, input *checker.Input) *Names {
-	// Resolve imports and exports from sources.
-	srcImports, srcExports, err := ResolveImportsSerial(p, input.Sources...)
-	cmd.CheckError(err)
+func convertToNames(F FileNames) *Names {
+	N := NewNames()
 
-	// Resolve exports from specifically provided exporters.
-	_, additionalExports, err := ResolveImportsSerial(p, input.AdditionalExports...)
-	cmd.CheckError(err)
+	for _, nn := range F {
+		N = N.Merge(nn)
+	}
 
-	// Resolve excluded exports from specifically provided exporters.
-	excludedExportPaths := append(input.ExcludedExports, input.Excludes...)
-	_, excludedExports, err := ResolveImportsSerial(p, slices.UniqueString(excludedExportPaths)...)
-	cmd.CheckError(err)
+	N.Clean()
 
-	// Resolve imports from specifically provided importers.
-	additionalImports, _, err := ResolveImportsSerial(p, input.AdditionalImports...)
-	cmd.CheckError(err)
-
-	// Resolve excluded imports from specifically provided importers.
-	excludedImportPaths := append(input.ExcludedImports, input.Excludes...)
-	excludedImports, _, err := ResolveImportsSerial(p, slices.UniqueString(excludedImportPaths)...)
-	cmd.CheckError(err)
-
-	// Combine all analyses.
-	imports := srcImports
-	imports = imports.Diff(excludedImports).Merge(additionalImports)
-	imports = consolidateIntoClasses(imports)
-
-	exports := srcExports
-	exports = exports.Diff(excludedExports).Merge(GetBuiltInNames(), additionalExports)
-	exports = consolidateIntoClasses(exports)
-
-	// Calculate unexported uses.
-	return Diff(imports, exports)
+	return N
 }
 
 func consolidateIntoClasses(n *Names) *Names {
