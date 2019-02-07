@@ -19,7 +19,7 @@ dep: ## Get the dependencies
 	@go get -v -d ./...
 
 build: dep ## Build the binary file
-	@go build -i -v ./cmd/${APP_NAME}
+	@go build -i -v -o ./bin/${APP_NAME} ./cmd/${APP_NAME}
 
 install: dep ## Install the binary file
 	@go install -i -v ./cmd/${APP_NAME}

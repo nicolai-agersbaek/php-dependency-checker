@@ -41,7 +41,7 @@ build:
         - make build
     artifacts:
         paths:
-            - php-dependency-checker
+            - bin/
         expire_in: 1 day
 
 artifact:branch:
@@ -50,7 +50,7 @@ artifact:branch:
         name: cgswong/aws:aws
         entrypoint: [""]
     script:
-        - "aws s3 cp php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
+        - "aws s3 cp bin/php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
     dependencies:
         - build
     when: manual
@@ -61,8 +61,8 @@ artifact:latest:
         name: cgswong/aws:aws
         entrypoint: [""]
     script:
-        - 'aws s3 cp php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-latest'
-        - "aws s3 cp php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
+        - 'aws s3 cp bin/php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-latest'
+        - "aws s3 cp bin/php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
     dependencies:
         - build
     only:
