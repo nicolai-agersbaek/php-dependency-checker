@@ -6,6 +6,26 @@ import (
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 )
 
+type commandOptions struct {
+	v, vv, vvv bool
+}
+
+func (o commandOptions) GetVerbosity() cmd.Verbosity {
+	if o.vvv {
+		return cmd.VerbosityDebug
+	}
+
+	if o.vv {
+		return cmd.VerbosityDetailed
+	}
+
+	if o.v {
+		return cmd.VerbosityNormal
+	}
+
+	return cmd.VerbosityNone
+}
+
 // FIXME: Fix incomplete descriptions!
 var rootCmd = &cobra.Command{
 	Use:   Name,

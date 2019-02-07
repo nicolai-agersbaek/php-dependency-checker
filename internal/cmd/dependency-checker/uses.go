@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
-	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 )
 
 func init() {
@@ -29,14 +28,14 @@ func imports(c *cobra.Command, args []string) {
 	printUses(p, "Exports", exports)
 }
 
-func printUses(p *cmd.Printer, title string, names *Names) {
+func printUses(p cmd.Printer, title string, names *Names) {
 	printUsesOf(p, title, "functions", names.Functions)
 	printUsesOf(p, title, "classes", names.Classes)
 	printUsesOf(p, title, "constants", names.Constants)
 	printUsesOf(p, title, "namespaces", names.Namespaces)
 }
 
-func printUsesOf(p *cmd.Printer, title, nameType string, names []string) {
+func printUsesOf(p cmd.Printer, title, nameType string, names []string) {
 	t := fmt.Sprintf("%s [%s]:", title, nameType)
 	p.LinesWithTitle(t, names)
 }

@@ -105,11 +105,20 @@ func GetBuiltInNames() *dependency_checker.Names {
 
 	names := dependency_checker.NewNames()
 
-	names.Functions = getNames(nameTypes["functions"])
-	names.Classes = getNames(nameTypes["classes"])
-	names.Interfaces = getNames(nameTypes["interfaces"])
-	names.Traits = getNames(nameTypes["traits"])
-	names.Constants = getConstants()
+	functions := getNames(nameTypes["functions"])
+	classes := getNames(nameTypes["classes"])
+	interfaces := getNames(nameTypes["interfaces"])
+	traits := getNames(nameTypes["traits"])
+	constants := getConstants()
+
+	names.Functions = functions
+	names.Classes = classes
+	names.Interfaces = interfaces
+	names.Traits = traits
+	names.Constants = constants
+
+	names.Classes = append(names.Classes, interfaces...)
+	names.Classes = append(names.Classes, traits...)
 
 	names.Clean()
 

@@ -4,10 +4,37 @@ import (
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
+	"os"
 	"time"
 )
 
+type CheckerInput struct {
+	Sources   []string
+	Exporters []string
+}
+
+func NewCheckerInput() *CheckerInput {
+	return &CheckerInput{}
+}
+
+var checkInput = &CheckerInput{}
+
+type checkCommandOptions struct {
+	commandOptions
+}
+
+var checkOptions = &checkCommandOptions{}
+
 func init() {
+	exportsDesc := `Specify the directory in which to search for exports.
+May be specified multiple times.`
+	checkCmd.Flags().StringArrayVar(&checkInput.Exporters, "exports", nil, exportsDesc)
+
+	checkCmd.Flags().BoolVar(&checkOptions.v, "v", false, "Output additional information.")
+	checkCmd.Flags().BoolVar(&checkOptions.vv, "vv", false, "Output detailed information.")
+	checkCmd.Flags().BoolVar(&checkOptions.vvv, "vvv", false, "Output debug information.")
+
 	rootCmd.AddCommand(checkCmd)
 }
 
@@ -19,26 +46,52 @@ var checkCmd = &cobra.Command{
 }
 
 func check(c *cobra.Command, args []string) {
+	checkInput.Sources = args
+
 	start := time.Now()
 
-	imports, exports, err := ResolveImportsSerial(args...)
-	cmd.CheckError(err)
-
-	// Calculate unexported uses
-	diff := Diff(imports, exports)
+	// Calculate unexported uses.
+	diff := doCheck(checkInput)
 
 	stop := time.Now()
 	elapsed := stop.Sub(start)
 
-	p := cmd.NewPrinter(c)
+	p := cmd.NewVerbosePrinter(cmd.NewPrinter(c), checkOptions.GetVerbosity())
 
-	c.Printf("Elapsed: %s\n", elapsed)
+	p.VLine("Elapsed: "+elapsed.String(), cmd.VerbosityNormal)
 
 	const maxLines = 15
 
-	p.LinesWithTitleMax("Imports (namespaces):", imports.Namespaces, maxLines)
-	p.LinesWithTitleMax("Exports (namespaces):", exports.Namespaces, maxLines)
+	if len(diff.Classes) > 0 {
+		p.VLinesWithTitleMax("Unexported uses (classes):", diff.Classes, maxLines, cmd.VerbosityNone)
+		os.Exit(1)
+	} else {
+		p.VLine("No unexported uses found!", cmd.VerbosityNormal)
+	}
+}
 
-	//p.linesWithTitleMax("Unexported uses (classes):", diff.Classes, maxLines)
-	p.LinesWithTitleMax("Unexported uses (namespaces):", diff.Namespaces, maxLines)
+func doCheck(input *CheckerInput) *Names {
+	// Resolve srcImports and srcExports from sources.
+	srcImports, srcExports, err := ResolveImportsSerial(input.Sources...)
+	cmd.CheckError(err)
+
+	// Resolve srcExports from specifically provided exporters.
+	_, exports, err := ResolveImportsSerial(input.Exporters...)
+	cmd.CheckError(err)
+
+	// Add built-in names and additional exports to list of available names.
+	srcExports.Merge(names.GetBuiltInNames())
+	srcExports.Merge(exports)
+
+	srcExports = consolidateIntoClasses(srcExports)
+
+	// Calculate unexported uses.
+	return Diff(srcImports, srcExports)
+}
+
+func consolidateIntoClasses(n *Names) *Names {
+	n.Classes = append(n.Classes, n.Interfaces...)
+	n.Classes = append(n.Classes, n.Traits...)
+
+	return n
 }

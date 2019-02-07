@@ -1,6 +1,6 @@
 package dependency_checker
 
-const Name = "dependency-checker"
+const Name = "php-dependency-checker"
 
 const Version = "0.1.0"
 

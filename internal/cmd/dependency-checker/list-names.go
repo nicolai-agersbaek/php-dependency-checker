@@ -16,6 +16,7 @@ var listNamesCmd = &cobra.Command{
 	Run:   listNames,
 }
 
+//noinspection GoUnusedParameter
 func listNames(c *cobra.Command, args []string) {
 	defined := names.GetBuiltInNames()
 
