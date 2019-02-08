@@ -30,25 +30,26 @@ func ResolveNamesParallel(p cmd.VerbosePrinter, importPaths, exportPaths []strin
 
 	const maxConcurrentFiles = 20
 
-	filesChan := make(chan string, maxConcurrentFiles)
-	resultsChan := make(chan *FileAnalysis)
+	importFilesChan := make(chan string, maxConcurrentFiles)
+	exportFilesChan := make(chan string, maxConcurrentFiles)
+	bothFilesChan := make(chan string, maxConcurrentFiles)
+	importResultsChan := make(chan *FileAnalysis)
+	exportResultsChan := make(chan *FileAnalysis)
+	bothResultsChan := make(chan *FileAnalysis)
 	errChan := make(chan error)
 
 	var wg sync.WaitGroup
 	wg.Add(numFiles)
 
 	// Start broadcasting paths
-	go broadcast(I, filesChan)
-	go broadcast(E, filesChan)
-	go broadcast(B, filesChan)
+	go broadcast(I, importFilesChan)
+	go broadcast(E, exportFilesChan)
+	go broadcast(B, bothFilesChan)
 
 	// Start analyses
-	go func() {
-		for f := range filesChan {
-			analyze(f, resultsChan, errChan, p)
-			wg.Done()
-		}
-	}()
+	go startAnalyses(wg, importFilesChan, importResultsChan, errChan, p)
+	go startAnalyses(wg, exportFilesChan, exportResultsChan, errChan, p)
+	go startAnalyses(wg, bothFilesChan, bothResultsChan, errChan, p)
 
 	done := make(chan bool)
 
@@ -64,7 +65,13 @@ func ResolveNamesParallel(p cmd.VerbosePrinter, importPaths, exportPaths []strin
 	select {
 	case <-done:
 	case err = <-errChan:
-	case r := <-resultsChan:
+	case r := <-importResultsChan:
+		r.Imports.Clean()
+		imports[r.Path] = r.Imports
+	case r := <-exportResultsChan:
+		r.Exports.Clean()
+		exports[r.Path] = r.Exports
+	case r := <-bothResultsChan:
 		r.Imports.Clean()
 		imports[r.Path] = r.Imports
 
@@ -77,6 +84,13 @@ func ResolveNamesParallel(p cmd.VerbosePrinter, importPaths, exportPaths []strin
 	}
 
 	return imports, exports, err
+}
+
+func startAnalyses(wg sync.WaitGroup, F <-chan string, results chan<- *FileAnalysis, errs chan<- error, p cmd.VerbosePrinter) {
+	for f := range F {
+		analyze(f, results, errs, p)
+		wg.Done()
+	}
 }
 
 func broadcast(F []string, c chan<- string) {
