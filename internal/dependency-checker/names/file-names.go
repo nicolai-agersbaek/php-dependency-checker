@@ -9,22 +9,39 @@ func NewImportsExports(imports *Names, exports *Names) *ImportsExports {
 //noinspection GoNameStartsWithPackageName
 type NamesByFile map[string]*Names
 
-type FileNames struct {
-	Path  Path
-	Names *Names
+//noinspection GoNameStartsWithPackageName
+type NamesByFileData struct {
+	m NamesByFile
 }
 
-func NewFileNames(path Path, names *Names) *FileNames {
-	return &FileNames{Path: path, Names: names}
+func NewNamesByFileData() *NamesByFileData {
+	return &NamesByFileData{m: make(NamesByFile)}
+}
+
+func (n *NamesByFileData) Put(file string, names *Names) {
+	n.m[file] = names
+}
+
+func (n *NamesByFileData) Data() NamesByFile {
+	return n.m
+}
+
+func (n *NamesByFileData) Merge(m *NamesByFileData) {
+	if m != nil {
+		for k, v := range m.Data() {
+			n.Put(k, v)
+		}
+	}
 }
 
 type FileAnalysis struct {
 	Path             string
 	Imports, Exports *Names
+	Error            error
 }
 
-func NewFileAnalysis(path string, imports *Names, exports *Names) *FileAnalysis {
-	return &FileAnalysis{Path: path, Imports: imports, Exports: exports}
+func NewFileAnalysisExp(path string, imports *Names, exports *Names, error error) *FileAnalysis {
+	return &FileAnalysis{Path: path, Imports: imports, Exports: exports, Error: error}
 }
 
 type Class string
