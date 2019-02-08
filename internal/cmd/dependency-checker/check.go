@@ -44,8 +44,14 @@ specified multiple times.`
 	checkCmd.Flags().StringArrayVarP(&checkInput.ExcludedImports, "exclude-imports", "I", nil, excludedImportsDesc)
 
 	checkCmd.Flags().BoolVarP(&parallelMode, "parallel", "p", false, "Perform parallel name resolution.")
-	checkCmd.Flags().IntVar(&printOpts.maxFiles, "max-files", printOpts.maxFiles, "Max files to display in error summary.")
-	checkCmd.Flags().IntVar(&printOpts.maxLines, "max-lines", printOpts.maxLines, "Max lines per file to display in error summary.")
+
+	maxFilesDesc := `Maximum number of files to display in error summary.
+If negative, all files will be shown.`
+	checkCmd.Flags().IntVar(&printOpts.maxFiles, "max-files", printOpts.maxFiles, maxFilesDesc)
+
+	maxLinesDesc := `Maximum number of lines per file to display in error
+summary. If negative, all lines will be shown.`
+	checkCmd.Flags().IntVar(&printOpts.maxLines, "max-lines", printOpts.maxLines, maxLinesDesc)
 
 	rootCmd.AddCommand(checkCmd)
 }
@@ -104,6 +110,10 @@ func printByFile(p cmd.Printer, N NamesByFile, maxFiles, maxLines int) {
 	fmt.Println()
 	p.Title(indent + "Errors" + indent)
 
+	if maxFiles < 0 {
+		maxFiles = len(N)
+	}
+
 	var i int
 	for f, nn := range N {
 		if i >= maxFiles {
@@ -114,13 +124,19 @@ func printByFile(p cmd.Printer, N NamesByFile, maxFiles, maxLines int) {
 		numCls := len(classes)
 
 		if numCls > 0 {
+			m := maxLines
+			if maxLines < 0 {
+				m = numCls
+			}
+
 			fmt.Printf("%s (%d):\n", f, numCls)
-			for _, cls := range slices.SliceString(classes, 0, maxLines) {
+
+			for _, cls := range slices.SliceString(classes, 0, m) {
 				fmt.Println(indent + cls)
 			}
-		}
 
-		i++
+			i++
+		}
 	}
 }
 

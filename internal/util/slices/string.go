@@ -127,8 +127,13 @@ func IntersectionString(A, B []string) []string {
 
 func SliceString(S []string, from, to int) []string {
 	// FIXME: Missing tests!
+	n := len(S)
+
+	from = intMin(n, from)
 	from = intMax(from, 0)
-	to = intMin(to, len(S))
+
+	to = intMin(to, n)
+	to = intMax(to, 0)
 
 	return S[from:to]
 }
