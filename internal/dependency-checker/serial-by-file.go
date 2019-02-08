@@ -5,44 +5,43 @@ import (
 	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 )
 
-func ResolveNamesSerial(p cmd.VerbosePrinter, importPaths, exportPaths []string) (FileNames, FileNames, error) {
-	var err error
+func ResolveNamesSerial(p cmd.VerbosePrinter, importPaths, exportPaths []string) (NamesByFile, NamesByFile, error) {
+	importFiles, exportFiles, err := resolveFiles(importPaths, exportPaths)
 
-	P := make([][]string, 2, 2)
-
-	for k, paths := range [][]string{importPaths, exportPaths} {
-		F, err := getPhpFilesSerial(paths)
-
-		if err != nil {
-			break
-		}
-
-		P[k] = slices.UniqueString(F)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	numFiles := len(slices.UniqueStrings(P...))
+	I, E, B := partitionFileSets(importFiles, exportFiles)
+
+	numFiles := len(I) + len(E) + len(B)
 	if numFiles > 0 {
 		p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
 	}
 
-	N := []FileNames{make(FileNames), make(FileNames)}
-	R := make(map[string]*ImportsExports)
+	N := []NamesByFile{make(NamesByFile), make(NamesByFile)}
 	verbosity := p.GetVerbosity()
 
-	for k, F := range P {
+	for k, F := range [][]string{I, E, B} {
 		for _, f := range F {
-			if _, ok := R[f]; !ok {
-				R[f], err = resolveFileImportsSerialByFile(f, verbosity)
-				if err != nil {
-					break
-				}
+			names, err := resolveFileImportsSerialByFile(f, verbosity)
+
+			if err != nil {
+				break
 			}
 
-			N[k][f] = R[f][k]
+			switch k {
+			case 0: // I
+				N[0][f] = names[0]
+			case 1: // E
+				N[1][f] = names[1]
+			case 2: // B
+				N[0][f] = names[0]
+				N[1][f] = names[1]
+			}
 		}
 	}
 

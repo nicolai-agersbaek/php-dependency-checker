@@ -60,7 +60,7 @@ func check(c *cobra.Command, args []string) {
 	start := time.Now()
 
 	// Calculate unexported uses.
-	diff := getCheckFunc(parallelMode)(p, importPaths, exportPaths)
+	diff := doCheck(getResolver(parallelMode), p, importPaths, exportPaths)
 
 	elapsed := time.Now().Sub(start)
 
@@ -94,18 +94,18 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%d"+suffix, d)
 }
 
-type checkFunc func(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names
+type resolver func(p cmd.VerbosePrinter, importPaths, exportPaths []string) (NamesByFile, NamesByFile, error)
 
-func getCheckFunc(inParallel bool) checkFunc {
+func getResolver(inParallel bool) resolver {
 	if inParallel {
-		return checkParallel
+		return ResolveNamesParallel
 	}
 
-	return checkSerial
+	return ResolveNamesSerial
 }
 
-func checkSerial(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
-	I, E, err := ResolveNamesSerial(p, importPaths, exportPaths)
+func doCheck(r resolver, p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
+	I, E, err := r(p, importPaths, exportPaths)
 	cmd.CheckError(err)
 
 	// Combine all analyses.
@@ -119,22 +119,7 @@ func checkSerial(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names
 	return Diff(imports, exports)
 }
 
-func checkParallel(p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
-	I, E, err := ResolveNamesParallel(p, importPaths, exportPaths)
-	cmd.CheckError(err)
-
-	// Combine all analyses.
-	imports := consolidateIntoClasses(convertToNames(I))
-
-	exports := convertToNames(E)
-	exports = exports.Merge(GetBuiltInNames())
-	exports = consolidateIntoClasses(exports)
-
-	// Calculate unexported uses.
-	return Diff(imports, exports)
-}
-
-func convertToNames(F FileNames) *Names {
+func convertToNames(F NamesByFile) *Names {
 	N := NewNames()
 
 	for _, nn := range F {
