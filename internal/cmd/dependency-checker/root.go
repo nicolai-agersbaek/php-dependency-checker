@@ -37,8 +37,6 @@ type rootOpts struct {
 var rootOptions = &rootOpts{}
 
 func (o *rootOpts) preRunE() error {
-	fmt.Println("CPU Profile: " + rootOptions.cpuProfile)
-
 	if rootOptions.cpuProfile != "" {
 		f, err := os.Create(rootOptions.cpuProfile)
 
@@ -51,6 +49,8 @@ func (o *rootOpts) preRunE() error {
 		if err != nil {
 			return err
 		}
+
+		fmt.Println("Saving CPU profile to: " + rootOptions.cpuProfile)
 	}
 
 	return nil

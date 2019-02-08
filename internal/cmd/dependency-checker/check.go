@@ -8,10 +8,17 @@ import (
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/checker"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"time"
 )
 
 var checkInput = &checker.Input{}
+
+type printOptions struct {
+	maxFiles, maxLines int
+}
+
+var printOpts = &printOptions{5, 10}
 
 var parallelMode = false
 
@@ -37,6 +44,8 @@ specified multiple times.`
 	checkCmd.Flags().StringArrayVarP(&checkInput.ExcludedImports, "exclude-imports", "I", nil, excludedImportsDesc)
 
 	checkCmd.Flags().BoolVarP(&parallelMode, "parallel", "p", false, "Perform parallel name resolution.")
+	checkCmd.Flags().IntVar(&printOpts.maxFiles, "max-files", printOpts.maxFiles, "Max files to display in error summary.")
+	checkCmd.Flags().IntVar(&printOpts.maxLines, "max-lines", printOpts.maxLines, "Max lines per file to display in error summary.")
 
 	rootCmd.AddCommand(checkCmd)
 }
@@ -66,20 +75,52 @@ func check(c *cobra.Command, args []string) {
 	start := time.Now()
 
 	// Calculate unexported uses.
-	diff := doCheck(getResolver(parallelMode), p, importPaths, exportPaths)
+	U, diff := doCheck(getResolver(parallelMode), p, importPaths, exportPaths)
 
 	elapsed := time.Now().Sub(start)
 
 	avgDuration := elapsed / time.Duration(len(importPaths)+len(exportPaths))
 	p.VLine(fmt.Sprintf("Elapsed: %s (avg. %s)", elapsed.String(), formatDuration(avgDuration)), cmd.VerbosityNormal)
 
-	const maxLines = 15
+	numClsErrors := len(diff.Classes)
+	if numClsErrors > 0 {
+		printLnf("Found %d unique errors in %d files.", numClsErrors, len(U))
+		printByFile(p, U, printOpts.maxFiles, printOpts.maxLines)
 
-	if len(diff.Classes) > 0 {
-		p.VLinesWithTitleMax("Unexported uses (classes):", diff.Classes, maxLines, cmd.VerbosityNone)
+		//p.VLinesWithTitleMax("Unexported uses (classes):", diff.Classes, printOpts.maxLines, cmd.VerbosityNone)
 		panic(newUnexportedClsErr())
 	} else {
 		p.VLine("No unexported uses found!", cmd.VerbosityNormal)
+	}
+}
+
+func printLnf(format string, a ...interface{}) {
+	fmt.Println(fmt.Sprintf(format, a...))
+}
+
+const indent = "    "
+
+func printByFile(p cmd.Printer, N NamesByFile, maxFiles, maxLines int) {
+	fmt.Println()
+	p.Title(indent + "Errors" + indent)
+
+	var i int
+	for f, nn := range N {
+		if i >= maxFiles {
+			break
+		}
+
+		classes := consolidateIntoClasses(nn).Classes
+		numCls := len(classes)
+
+		if numCls > 0 {
+			fmt.Printf("%s (%d):\n", f, numCls)
+			for _, cls := range slices.SliceString(classes, 0, maxLines) {
+				fmt.Println(indent + cls)
+			}
+		}
+
+		i++
 	}
 }
 
@@ -110,7 +151,7 @@ func getResolver(inParallel bool) resolver {
 	return ResolveNamesSerial
 }
 
-func doCheck(r resolver, p cmd.VerbosePrinter, importPaths, exportPaths []string) *Names {
+func doCheck(r resolver, p cmd.VerbosePrinter, importPaths, exportPaths []string) (NamesByFile, *Names) {
 	I, E, err := r(p, importPaths, exportPaths)
 	cmd.CheckError(err)
 
@@ -122,7 +163,18 @@ func doCheck(r resolver, p cmd.VerbosePrinter, importPaths, exportPaths []string
 	exports = consolidateIntoClasses(exports)
 
 	// Calculate unexported uses.
-	return Diff(imports, exports)
+	D := Diff(imports, exports)
+	U := make(NamesByFile)
+
+	for f, N := range I {
+		d := N.Diff(exports)
+
+		if !d.Empty() {
+			U[f] = d
+		}
+	}
+
+	return U, D
 }
 
 func convertToNames(F NamesByFile) *Names {

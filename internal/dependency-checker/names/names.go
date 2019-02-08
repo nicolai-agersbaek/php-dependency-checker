@@ -143,6 +143,13 @@ func (n *Names) Diff(names ...*Names) *Names {
 	return diff
 }
 
+func (n *Names) Empty() bool {
+	// FIXME: Missing tests!
+	n.Clean()
+
+	return slices.EmptyStrings([][]string{n.Functions, n.Classes, n.Interfaces, n.Traits, n.Constants}...)
+}
+
 func Diff(names1 *Names, names2 *Names) *Names {
 	// FIXME: Missing tests!
 	return &Names{

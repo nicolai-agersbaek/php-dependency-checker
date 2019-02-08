@@ -125,6 +125,56 @@ func IntersectionString(A, B []string) []string {
 	return I
 }
 
+func SliceString(S []string, from, to int) []string {
+	// FIXME: Missing tests!
+	from = intMax(from, 0)
+	to = intMin(to, len(S))
+
+	return S[from:to]
+}
+
+func intMin(a, b int) int {
+	if a < b {
+		return a
+	}
+
+	return b
+}
+
+func intMax(a, b int) int {
+	if a > b {
+		return a
+	}
+
+	return b
+}
+
+// EmptyStrings determines if all slices S ∈ Ss are empty.
+// The definition of empty is given by EmptyString.
+func EmptyStrings(Ss ...[]string) bool {
+	// FIXME: Missing tests!
+	for _, S := range Ss {
+		if !EmptyString(S) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// EmptyString determines if the given slice of strings, S, is empty.
+// This means that either len(S) == 0, or s == "" for all s ∈ S.
+func EmptyString(S []string) bool {
+	// FIXME: Missing tests!
+	for _, s := range S {
+		if s != "" {
+			return false
+		}
+	}
+
+	return true
+}
+
 func UniqueString(S []string) []string {
 	U := make([]string, 0, len(S))
 	M := make(map[string]bool, len(S))
