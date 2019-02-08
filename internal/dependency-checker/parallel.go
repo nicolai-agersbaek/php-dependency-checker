@@ -103,8 +103,8 @@ func analyze(file string, results chan<- *FileAnalysis, errs chan<- error, p cmd
 	I, E, err := analyzeFile(file, p)
 
 	if err != nil {
-		//errs <- err
-		panic(err)
+		errs <- err
+		//panic(err)
 	}
 
 	results <- NewFileAnalysis(file, I, E)
