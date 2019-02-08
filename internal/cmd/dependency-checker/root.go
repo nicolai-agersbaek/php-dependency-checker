@@ -1,9 +1,12 @@
 package dependency_checker
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	"os"
+	"runtime/pprof"
 )
 
 type verbosityOptions struct {
@@ -26,12 +29,42 @@ func (o verbosityOptions) GetVerbosity() cmd.Verbosity {
 	return cmd.VerbosityNone
 }
 
-var rootOptions = &verbosityOptions{}
+type rootOpts struct {
+	verbosityOptions
+	cpuProfile string
+}
+
+var rootOptions = &rootOpts{}
+
+func (o *rootOpts) preRunE() error {
+	fmt.Println("CPU Profile: " + rootOptions.cpuProfile)
+
+	if rootOptions.cpuProfile != "" {
+		f, err := os.Create(rootOptions.cpuProfile)
+
+		if err != nil {
+			return err
+		}
+
+		err = pprof.StartCPUProfile(f)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&rootOptions.v, "v", false, "Output additional information.")
 	rootCmd.PersistentFlags().BoolVar(&rootOptions.vv, "vv", false, "Output detailed information.")
 	rootCmd.PersistentFlags().BoolVar(&rootOptions.vvv, "vvv", false, "Output debug information.")
+
+	rootCmd.PersistentFlags().StringVar(&rootOptions.cpuProfile, "cpu-profile", "", "Write CPU profile to file.")
+
+	rootCmd.PersistentPreRunE = cmd.WrapE(rootOptions.preRunE)
+	rootCmd.PersistentPostRun = cmd.Wrap(pprof.StopCPUProfile)
 }
 
 // FIXME: Fix incomplete descriptions!
@@ -54,7 +87,17 @@ func getVerbosePrinter(c *cobra.Command) cmd.VerbosePrinter {
 
 // Execute executes the main command for the dependency checker
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		cmd.CheckError(err)
-	}
+	defer func() {
+		if r := recover(); r != nil {
+			pprof.StopCPUProfile()
+
+			if _, ok := r.(errUnexportedClasses); ok {
+				os.Exit(1)
+			}
+
+			panic(r)
+		}
+	}()
+
+	cmd.CheckError(rootCmd.Execute())
 }

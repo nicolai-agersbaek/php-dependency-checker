@@ -1,13 +1,13 @@
 package dependency_checker
 
 import (
+	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/checker"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
-	"os"
 	"time"
 )
 
@@ -48,6 +48,12 @@ var checkCmd = &cobra.Command{
 	Run:   check,
 }
 
+type errUnexportedClasses error
+
+func newUnexportedClsErr() error {
+	return errUnexportedClasses(errors.New("unexported classes"))
+}
+
 func check(c *cobra.Command, args []string) {
 	checkInput.Sources = args
 
@@ -71,7 +77,7 @@ func check(c *cobra.Command, args []string) {
 
 	if len(diff.Classes) > 0 {
 		p.VLinesWithTitleMax("Unexported uses (classes):", diff.Classes, maxLines, cmd.VerbosityNone)
-		os.Exit(1)
+		panic(newUnexportedClsErr())
 	} else {
 		p.VLine("No unexported uses found!", cmd.VerbosityNormal)
 	}

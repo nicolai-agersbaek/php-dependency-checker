@@ -3,9 +3,8 @@ package dependency_checker
 import (
 	"errors"
 	"fmt"
-	"github.com/z7zmey/php-parser/php7"
-
 	pErrors "github.com/z7zmey/php-parser/errors"
+	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
@@ -143,7 +142,7 @@ func (c *collector) Merge(C *collector) {
 
 func walkFiles(done <-chan bool, files []string) (<-chan string, <-chan error) {
 	paths := make(chan string)
-	errc := make(chan error, 1)
+	errChan := make(chan error, 1)
 
 	pushFiles := func() error {
 		for _, f := range files {
@@ -160,10 +159,10 @@ func walkFiles(done <-chan bool, files []string) (<-chan string, <-chan error) {
 	go func() {
 		defer close(paths)
 
-		errc <- pushFiles()
+		errChan <- pushFiles()
 	}()
 
-	return paths, errc
+	return paths, errChan
 }
 
 func digester(printer cmd.VerbosePrinter, done <-chan bool, paths <-chan string, results chan<- *FileAnalysis) {
