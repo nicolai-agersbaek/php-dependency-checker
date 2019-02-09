@@ -31,7 +31,8 @@ func (o verbosityOptions) GetVerbosity() cmd.Verbosity {
 
 type rootOpts struct {
 	verbosityOptions
-	cpuProfile string
+	cpuProfile, memProfile string
+	memProfileWritten      bool
 }
 
 var rootOptions = &rootOpts{}
@@ -56,15 +57,50 @@ func (o *rootOpts) preRunE() error {
 	return nil
 }
 
+func (o *rootOpts) postRunE() error {
+	pprof.StopCPUProfile()
+
+	return nil
+}
+
+func (o *rootOpts) writeMemProfile() error {
+	if o.memProfileWritten {
+		return nil
+	}
+
+	if o.memProfile != "" {
+		f, err := os.Create(o.memProfile)
+		if err != nil {
+			return err
+		}
+
+		err = pprof.WriteHeapProfile(f)
+		if err != nil {
+			return err
+		}
+
+		err = f.Close()
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Saving memory profile to: " + rootOptions.memProfile)
+		o.memProfileWritten = true
+	}
+
+	return nil
+}
+
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&rootOptions.v, "v", false, "Output additional information.")
 	rootCmd.PersistentFlags().BoolVar(&rootOptions.vv, "vv", false, "Output detailed information.")
 	rootCmd.PersistentFlags().BoolVar(&rootOptions.vvv, "vvv", false, "Output debug information.")
 
 	rootCmd.PersistentFlags().StringVar(&rootOptions.cpuProfile, "cpu-profile", "", "Write CPU profile to file.")
+	rootCmd.PersistentFlags().StringVar(&rootOptions.memProfile, "mem-profile", "", "Write memory profile to file.")
 
 	rootCmd.PersistentPreRunE = cmd.WrapE(rootOptions.preRunE)
-	rootCmd.PersistentPostRun = cmd.Wrap(pprof.StopCPUProfile)
+	rootCmd.PersistentPostRunE = cmd.WrapE(rootOptions.postRunE)
 }
 
 // FIXME: Fix incomplete descriptions!
@@ -90,6 +126,11 @@ func Execute() {
 	defer func() {
 		if r := recover(); r != nil {
 			pprof.StopCPUProfile()
+
+			err := rootOptions.writeMemProfile()
+			if err != nil {
+				panic(err)
+			}
 
 			if _, ok := r.(errUnexportedClasses); ok {
 				os.Exit(1)
