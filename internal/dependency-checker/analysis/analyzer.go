@@ -6,6 +6,6 @@ import (
 )
 
 type Analyzer interface {
-	Analyze(src io.Reader, path string, r resolver.Resolver) (*Analysis, chan<- *ParserError, error)
-	AnalyzeFile(path string, r resolver.Resolver) (*Analysis, chan<- *ParserError, error)
+	Analyze(src io.Reader, path string, r resolver.Resolver) (*Analysis, *ParserErrors, error)
+	AnalyzeFile(path string, r resolver.Resolver) (*Analysis, *ParserErrors, error)
 }

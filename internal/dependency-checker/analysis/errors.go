@@ -2,11 +2,11 @@ package analysis
 
 import "github.com/z7zmey/php-parser/errors"
 
-type ParserError struct {
-	Path  string
-	Error *errors.Error
+type ParserErrors struct {
+	Path   string
+	Errors []*errors.Error
 }
 
-func NewParserError(path string, error *errors.Error) *ParserError {
-	return &ParserError{Path: path, Error: error}
+func NewParserErrors(path string, errors []*errors.Error) *ParserErrors {
+	return &ParserErrors{Path: path, Errors: errors}
 }

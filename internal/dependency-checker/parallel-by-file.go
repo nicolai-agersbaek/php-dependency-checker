@@ -3,12 +3,11 @@ package dependency_checker
 import (
 	"errors"
 	pErrors "github.com/z7zmey/php-parser/errors"
-	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/analysis"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/resolver"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
-	"os"
 	"sync"
 )
 
@@ -163,36 +162,21 @@ func digester(printer cmd.VerbosePrinter, done <-chan bool, paths <-chan string,
 }
 
 func analyzeFile(path string, p cmd.VerbosePrinter) (*Names, *Names, error) {
-	src, err := os.Open(path)
+	r := resolver.NewImportExportResolver()
+
+	analyzer := analysis.NewFileAnalyzer()
+
+	result, parserErrs, err := analyzer.AnalyzeFile(path, r)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	defer func() {
-		if err := src.Close(); err != nil {
-			panic(err)
-		}
-	}()
-
-	parser := php7.NewParser(src, path)
-	parser.Parse()
-
-	parserErrors := parser.GetErrors()
-
-	r := resolver.NewImportExportResolver()
-
-	if len(parserErrors) > 0 {
-		logParserErrorsV(path, parser.GetErrors(), p)
-	} else {
-		rootNode := parser.GetRootNode()
-
-		// Resolve imports
-		rootNode.Walk(r)
-		r.Clean()
+	if len(parserErrs.Errors) > 0 {
+		logParserErrorsV(parserErrs.Path, parserErrs.Errors, p)
 	}
 
-	return r.Imports, r.Exports, nil
+	return result.Imports, result.Exports, nil
 }
 
 func logParserErrorsV(path string, errors []*pErrors.Error, p cmd.VerbosePrinter) {

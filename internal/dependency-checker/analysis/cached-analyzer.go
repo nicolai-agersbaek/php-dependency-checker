@@ -17,7 +17,7 @@ func NewCachedAnalyzer(cacheDir string, analyzer Analyzer) *CachedAnalyzer {
 	return &CachedAnalyzer{cacheDir: cacheDir, analyzer: analyzer}
 }
 
-func (a *CachedAnalyzer) Analyze(src io.Reader, path string, r resolver.Resolver) (*Analysis, chan<- *ParserError, error) {
+func (a *CachedAnalyzer) Analyze(src io.Reader, path string, r resolver.Resolver) (*Analysis, *ParserErrors, error) {
 	h, err := hashContent(src)
 
 	if err != nil {
@@ -39,7 +39,7 @@ func (a *CachedAnalyzer) Analyze(src io.Reader, path string, r resolver.Resolver
 	return analysis, ch, err
 }
 
-func (a *CachedAnalyzer) AnalyzeFile(path string, r resolver.Resolver) (*Analysis, chan<- *ParserError, error) {
+func (a *CachedAnalyzer) AnalyzeFile(path string, r resolver.Resolver) (*Analysis, *ParserErrors, error) {
 	src, err := os.Open(path)
 
 	if err != nil {
