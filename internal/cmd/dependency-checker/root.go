@@ -9,6 +9,10 @@ import (
 	"runtime/pprof"
 )
 
+const Name = "php-dependency-checker"
+
+const Version = "0.1.0"
+
 type verbosityOptions struct {
 	v, vv, vvv bool
 }
@@ -103,13 +107,15 @@ func init() {
 	rootCmd.PersistentPostRunE = cmd.WrapE(rootOptions.postRunE)
 }
 
-// FIXME: Fix incomplete descriptions!
+//noinspection SpellCheckingInspection
 var rootCmd = &cobra.Command{
 	Use:   Name,
-	Short: "dp",
-	Long: `Some
-                long
-                description`,
+	Short: "phpdp",
+	Long: `
+Provides tooling for analyzing PHP imports and exports of functions, classes,
+constants and namespaces.
+Can be used to list these as well as analyze discrepancies in dependencies of
+any PHP project, including projects using Composer for dependency management.`,
 	Version: Version,
 	Run: func(c *cobra.Command, args []string) {
 		// Print the help information if command is invoked without any arguments

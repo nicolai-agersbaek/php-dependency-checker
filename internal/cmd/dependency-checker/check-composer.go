@@ -4,7 +4,9 @@ import (
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/composer-checker"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
+	"log"
 )
 
 var conf = &Config{
@@ -28,6 +30,8 @@ var checkComposerCmd = &cobra.Command{
 }
 
 func checkComposer(c *cobra.Command, args []string) {
+	log.Fatal("not yet implemented!")
+
 	p := getVerbosePrinter(c)
 
 	res, err := analyze(p, args[0])

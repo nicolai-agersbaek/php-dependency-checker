@@ -1,4 +1,4 @@
-package checker
+package dependency_checker
 
 import (
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"

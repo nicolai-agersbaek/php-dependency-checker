@@ -1,4 +1,4 @@
-package dependency_checker
+package composer_checker
 
 import "path/filepath"
 
