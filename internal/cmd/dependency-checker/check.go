@@ -106,7 +106,7 @@ const indent = "    "
 
 func printByFile(p cmd.Printer, N NamesByFile, maxFiles, maxLines int) {
 	fmt.Println()
-	p.Title(indent + "Errors" + indent)
+	p.Title(indent + "Error" + indent)
 
 	if maxFiles < 0 {
 		maxFiles = len(N)

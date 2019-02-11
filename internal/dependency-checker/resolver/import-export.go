@@ -12,29 +12,46 @@ import (
 
 type ImportExportResolver struct {
 	visitor.NamespaceResolver
+	dirty   bool
 	Imports *Names
 	Exports *Names
+}
+
+func (r *ImportExportResolver) GetImports() *Names {
+	r.Clean()
+	return r.Imports
+}
+
+func (r *ImportExportResolver) GetExports() *Names {
+	r.Clean()
+	return r.Exports
 }
 
 func NewImportExportResolver() *ImportExportResolver {
 	return &ImportExportResolver{
 		*visitor.NewNamespaceResolver(),
+		false,
 		NewNames(),
 		NewNames(),
 	}
 }
 
 func (r *ImportExportResolver) Clean() {
-	r.Imports.Clean()
-	r.Exports.Clean()
+	if r.dirty {
+		r.Imports.Clean()
+		r.Exports.Clean()
+		r.dirty = false
+	}
 }
 
 func (r *ImportExportResolver) addImport(n node.Node) {
 	r.Imports.Add(r.resolveName(n))
+	r.dirty = true
 }
 
 func (r *ImportExportResolver) addExport(n node.Node) {
 	r.Exports.Add(r.resolveName(n))
+	r.dirty = true
 }
 
 func (r *ImportExportResolver) resolveName(nn node.Node) string {

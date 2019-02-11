@@ -101,8 +101,7 @@ func analyzeFileFlexible(path string, p cmd.VerbosePrinter, r resolver.Resolver)
 
 		// Resolve imports
 		rootNode.Walk(r)
-		r.Clean()
 	}
 
-	return r.Imports(), r.Exports(), nil
+	return r.GetImports(), r.GetExports(), nil
 }

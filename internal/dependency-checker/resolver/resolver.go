@@ -7,7 +7,6 @@ import (
 
 type Resolver interface {
 	walker.Visitor
-	Clean()
-	Imports() *Names
-	Exports() *Names
+	GetImports() *Names
+	GetExports() *Names
 }
