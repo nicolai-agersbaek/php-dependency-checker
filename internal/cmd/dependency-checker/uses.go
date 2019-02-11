@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 )
 
 func init() {
@@ -20,7 +22,7 @@ var usesCmd = &cobra.Command{
 func imports(c *cobra.Command, args []string) {
 	p := getVerbosePrinter(c)
 
-	imports, exports, err := ResolveImportsSerial(p, args...)
+	imports, exports, err := dependency_checker.ResolveImportsSerial(p, args...)
 	cmd.CheckError(err)
 
 	// Print uses
