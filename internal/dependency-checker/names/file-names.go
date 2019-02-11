@@ -9,6 +9,19 @@ func NewImportsExports(imports *Names, exports *Names) *ImportsExports {
 //noinspection GoNameStartsWithPackageName
 type NamesByFile map[string]*Names
 
+func ConvertToNames(F NamesByFile) *Names {
+	// FIXME: Missing tests!
+	N := NewNames()
+
+	for _, nn := range F {
+		N = N.Merge(nn)
+	}
+
+	N.Clean()
+
+	return N
+}
+
 //noinspection GoNameStartsWithPackageName
 type NamesByFileData struct {
 	m NamesByFile

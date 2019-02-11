@@ -84,6 +84,14 @@ func NewNames() *Names {
 	}
 }
 
+func ConsolidateIntoClasses(n *Names) *Names {
+	// FIXME: Missing tests!
+	n.Classes = append(n.Classes, n.Interfaces...)
+	n.Classes = append(n.Classes, n.Traits...)
+
+	return n
+}
+
 func (n *Names) Add(fqn string) {
 	// FIXME: Missing tests!
 	if IsFunctionName(fqn) {

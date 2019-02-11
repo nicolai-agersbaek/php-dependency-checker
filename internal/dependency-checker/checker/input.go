@@ -1,4 +1,4 @@
-package dependency_checker
+package checker
 
 import (
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
@@ -19,7 +19,7 @@ func NewInput() *Input {
 	return &Input{}
 }
 
-func (i *Input) ImportPaths() []string {
+func (i *Input) ImportsFromFiles() []string {
 	// FIXME: Missing tests!
 	include := slices.UniqueStrings(resolvePhpFiles(i.Sources), resolvePhpFiles(i.AdditionalImports))
 	exclude := slices.UniqueStrings(resolvePhpFiles(i.Excludes), resolvePhpFiles(i.ExcludedImports))
@@ -27,7 +27,7 @@ func (i *Input) ImportPaths() []string {
 	return slices.DiffString(include, exclude)
 }
 
-func (i *Input) ExportPaths() []string {
+func (i *Input) ExportsFromFiles() []string {
 	// FIXME: Missing tests!
 	include := slices.UniqueStrings(resolvePhpFiles(i.Sources), resolvePhpFiles(i.AdditionalExports))
 	exclude := slices.UniqueStrings(resolvePhpFiles(i.Excludes), resolvePhpFiles(i.ExcludedExports))

@@ -15,12 +15,18 @@ func ResolveNamesSerial(p cmd.VerbosePrinter, importPaths, exportPaths []string)
 		return nil, nil, err
 	}
 
-	I, E, B := partitionFileSets(importFiles, exportFiles)
+	I, E, B := PartitionFileSets(importFiles, exportFiles)
 
 	numFiles := len(I) + len(E) + len(B)
 	if numFiles > 0 {
 		p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
 	}
+
+	return ResolveNamesSerialFromFiles(p, I, E, B)
+}
+
+func ResolveNamesSerialFromFiles(p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
+	var err error
 
 	N := []NamesByFile{make(NamesByFile), make(NamesByFile)}
 	verbosity := p.GetVerbosity()

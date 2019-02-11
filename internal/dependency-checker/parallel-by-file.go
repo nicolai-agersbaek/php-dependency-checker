@@ -21,13 +21,17 @@ func ResolveNamesParallel(p cmd.VerbosePrinter, importPaths, exportPaths []strin
 		return nil, nil, err
 	}
 
-	I, E, B := partitionFileSets(importFiles, exportFiles)
+	I, E, B := PartitionFileSets(importFiles, exportFiles)
 
 	numFiles := len(I) + len(E) + len(B)
 	if numFiles > 0 {
 		p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
 	}
 
+	return ResolveNamesParallelFromFiles(p, I, E, B)
+}
+
+func ResolveNamesParallelFromFiles(p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
 	const numAnalyzers = 5
 
 	analysisInput := []struct {
@@ -44,7 +48,7 @@ func ResolveNamesParallel(p cmd.VerbosePrinter, importPaths, exportPaths []strin
 	for _, input := range analysisInput {
 		c := newCollector(input.mode)
 
-		err = resolveBothNames(p, input.files, numAnalyzers, c)
+		err := resolveBothNames(p, input.files, numAnalyzers, c)
 
 		if err != nil {
 			return nil, nil, err
@@ -53,7 +57,7 @@ func ResolveNamesParallel(p cmd.VerbosePrinter, importPaths, exportPaths []strin
 		C.Merge(c)
 	}
 
-	return C.imports.Data(), C.exports.Data(), err
+	return C.imports.Data(), C.exports.Data(), nil
 }
 
 func resolveBothNames(p cmd.VerbosePrinter, files []string, numAnalyzers int, c *collector) error {
@@ -238,9 +242,9 @@ func resolveFiles(importPaths, exportPaths []string) ([]string, []string, error)
 	return P[0], P[1], nil
 }
 
-// partitionFileSets partitions importFiles and exportFiles into disjunct sets I,
+// PartitionFileSets partitions importFiles and exportFiles into disjunct sets I,
 // E and B, representing the files to be imported, exported and both, respectively.
-func partitionFileSets(importFiles, exportFiles []string) (I, E, B []string) {
+func PartitionFileSets(importFiles, exportFiles []string) (I, E, B []string) {
 	// FIXME: Missing tests!
 	I = slices.DiffString(importFiles, exportFiles)
 	E = slices.DiffString(exportFiles, importFiles)
