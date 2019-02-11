@@ -1,29 +1,11 @@
 package dependency_checker
 
 import (
-	"fmt"
 	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"os"
 )
-
-func ResolveNamesSerial(p cmd.VerbosePrinter, importPaths, exportPaths []string) (NamesByFile, NamesByFile, error) {
-	importFiles, exportFiles, err := resolveFiles(importPaths, exportPaths)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	I, E, B := PartitionFileSets(importFiles, exportFiles)
-
-	numFiles := len(I) + len(E) + len(B)
-	if numFiles > 0 {
-		p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
-	}
-
-	return ResolveNamesSerialFromFiles(p, I, E, B)
-}
 
 func ResolveNamesSerialFromFiles(p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
 	var err error

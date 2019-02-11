@@ -2,7 +2,6 @@ package dependency_checker
 
 import (
 	"errors"
-	"fmt"
 	pErrors "github.com/z7zmey/php-parser/errors"
 	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
@@ -11,25 +10,6 @@ import (
 	"os"
 	"sync"
 )
-
-func ResolveNamesParallel(p cmd.VerbosePrinter, importPaths, exportPaths []string) (NamesByFile, NamesByFile, error) {
-	var err error
-
-	importFiles, exportFiles, err := resolveFiles(importPaths, exportPaths)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	I, E, B := PartitionFileSets(importFiles, exportFiles)
-
-	numFiles := len(I) + len(E) + len(B)
-	if numFiles > 0 {
-		p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
-	}
-
-	return ResolveNamesParallelFromFiles(p, I, E, B)
-}
 
 func ResolveNamesParallelFromFiles(p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
 	const numAnalyzers = 5
