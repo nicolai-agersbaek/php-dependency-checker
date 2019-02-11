@@ -180,7 +180,7 @@ func analyzeFile(path string, p cmd.VerbosePrinter) (*Names, *Names, error) {
 
 	parserErrors := parser.GetErrors()
 
-	r := resolver.NewNameResolver()
+	r := resolver.NewImportExportResolver()
 
 	if len(parserErrors) > 0 {
 		logParserErrorsV(path, parser.GetErrors(), p)

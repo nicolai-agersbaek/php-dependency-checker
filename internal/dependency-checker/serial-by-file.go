@@ -55,7 +55,7 @@ func resolveFileImportsSerialByFile(path string, v cmd.Verbosity) (*ImportsExpor
 
 	parserErrors := ParserErrors(parser.GetErrors())
 
-	r := resolver.NewNameResolver()
+	r := resolver.NewImportExportResolver()
 
 	if v >= cmd.VerbosityDebug && len(parserErrors) > 0 {
 		logParserErrors(path, parser.GetErrors())

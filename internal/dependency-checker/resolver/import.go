@@ -7,37 +7,29 @@ import (
 	"github.com/z7zmey/php-parser/node/stmt"
 	"github.com/z7zmey/php-parser/visitor"
 	"github.com/z7zmey/php-parser/walker"
-	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 )
 
-type NameResolver struct {
+type ImportResolver struct {
 	visitor.NamespaceResolver
 	Imports *Names
-	Exports *Names
 }
 
-func NewNameResolver() *NameResolver {
-	return &NameResolver{
+func NewImportResolver() *ImportResolver {
+	return &ImportResolver{
 		*visitor.NewNamespaceResolver(),
-		NewNames(),
 		NewNames(),
 	}
 }
 
-func (r *NameResolver) Clean() {
+func (r *ImportResolver) Clean() {
 	r.Imports.Clean()
-	r.Exports.Clean()
 }
 
-func (r *NameResolver) addImport(n node.Node) {
+func (r *ImportResolver) addImport(n node.Node) {
 	r.Imports.Add(r.resolveName(n))
 }
 
-func (r *NameResolver) addExport(n node.Node) {
-	r.Exports.Add(r.resolveName(n))
-}
-
-func (r *NameResolver) resolveName(nn node.Node) string {
+func (r *ImportResolver) resolveName(nn node.Node) string {
 	var nameParts []node.Node
 
 	switch n := nn.(type) {
@@ -50,7 +42,7 @@ func (r *NameResolver) resolveName(nn node.Node) string {
 	return ConcatNameParts(nameParts)
 }
 
-func (r *NameResolver) EnterNode(w walker.Walkable) bool {
+func (r *ImportResolver) EnterNode(w walker.Walkable) bool {
 	switch n := w.(type) {
 	case *stmt.Namespace:
 		if n.NamespaceName == nil {
@@ -59,7 +51,6 @@ func (r *NameResolver) EnterNode(w walker.Walkable) bool {
 			NSParts := n.NamespaceName.(*name.Name).Parts
 			nsName := ConcatNameParts(NSParts)
 			r.Namespace = visitor.NewNamespace(nsName)
-			r.Exports.AddNs(nsName)
 		}
 
 	case *stmt.UseList:
@@ -105,7 +96,6 @@ func (r *NameResolver) EnterNode(w walker.Walkable) bool {
 
 		if n.ClassName != nil {
 			r.AddNamespacedName(n, n.ClassName.(*node.Identifier).Value)
-			r.addExport(n)
 		}
 
 	case *stmt.Interface:
@@ -117,15 +107,12 @@ func (r *NameResolver) EnterNode(w walker.Walkable) bool {
 		}
 
 		r.AddNamespacedName(n, n.InterfaceName.(*node.Identifier).Value)
-		r.addExport(n)
 
 	case *stmt.Trait:
 		r.AddNamespacedName(n, n.TraitName.(*node.Identifier).Value)
-		r.addExport(n)
 
 	case *stmt.Function:
 		r.AddNamespacedName(n, n.FunctionName.(*node.Identifier).Value)
-		r.addExport(n)
 
 		for _, parameter := range n.Params {
 			r.ResolveType(parameter.(*node.Parameter).VariableType)
@@ -162,7 +149,6 @@ func (r *NameResolver) EnterNode(w walker.Walkable) bool {
 	case *stmt.ConstList:
 		for _, constant := range n.Consts {
 			r.AddNamespacedName(constant, constant.(*stmt.Constant).ConstantName.(*node.Identifier).Value)
-			r.addExport(constant)
 		}
 
 	case *expr.StaticCall:
@@ -234,12 +220,12 @@ func (r *NameResolver) EnterNode(w walker.Walkable) bool {
 }
 
 // GetChildrenVisitor is invoked at every node parameter that contains children nodes
-func (r *NameResolver) GetChildrenVisitor(key string) walker.Visitor {
+func (r *ImportResolver) GetChildrenVisitor(key string) walker.Visitor {
 	return r
 }
 
 // LeaveNode is invoked after node process
-func (r *NameResolver) LeaveNode(w walker.Walkable) {
+func (r *ImportResolver) LeaveNode(w walker.Walkable) {
 	switch n := w.(type) {
 	case *stmt.Namespace:
 		if n.Stmts != nil {
