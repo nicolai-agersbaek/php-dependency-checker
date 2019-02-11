@@ -14,6 +14,8 @@ import (
 func ResolveNamesParallelFromFiles(p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
 	const numAnalyzers = 5
 
+	analyzer := analysis.NewFileAnalyzer()
+
 	analysisInput := []struct {
 		files []string
 		mode  analysisMode
@@ -28,7 +30,7 @@ func ResolveNamesParallelFromFiles(p cmd.VerbosePrinter, I, E, B []string) (Name
 	for _, input := range analysisInput {
 		c := newCollector(input.mode)
 
-		err := resolveBothNames(p, input.files, numAnalyzers, c)
+		err := resolveBothNames(analyzer, p, input.files, numAnalyzers, c)
 
 		if err != nil {
 			return nil, nil, err
@@ -40,7 +42,7 @@ func ResolveNamesParallelFromFiles(p cmd.VerbosePrinter, I, E, B []string) (Name
 	return C.imports.Data(), C.exports.Data(), nil
 }
 
-func resolveBothNames(p cmd.VerbosePrinter, files []string, numAnalyzers int, c *collector) error {
+func resolveBothNames(analyzer analysis.Analyzer, p cmd.VerbosePrinter, files []string, numAnalyzers int, c *collector) error {
 	done := make(chan bool)
 	defer close(done)
 
@@ -52,7 +54,7 @@ func resolveBothNames(p cmd.VerbosePrinter, files []string, numAnalyzers int, c 
 
 	for i := 0; i < numAnalyzers; i++ {
 		go func() {
-			digester(p, done, fileChan, resultChan)
+			digester(analyzer, p, done, fileChan, resultChan)
 			wg.Done()
 		}()
 	}
@@ -149,9 +151,9 @@ func walkFiles(done <-chan bool, files []string) (<-chan string, <-chan error) {
 	return paths, errChan
 }
 
-func digester(printer cmd.VerbosePrinter, done <-chan bool, paths <-chan string, results chan<- *FileAnalysis) {
+func digester(analyzer analysis.Analyzer, printer cmd.VerbosePrinter, done <-chan bool, paths <-chan string, results chan<- *FileAnalysis) {
 	for p := range paths {
-		imports, exports, err := analyzeFile(p, printer)
+		imports, exports, err := analyzeFile(analyzer, p, printer)
 
 		select {
 		case results <- NewFileAnalysisExp(p, imports, exports, err):
@@ -161,12 +163,8 @@ func digester(printer cmd.VerbosePrinter, done <-chan bool, paths <-chan string,
 	}
 }
 
-func analyzeFile(path string, p cmd.VerbosePrinter) (*Names, *Names, error) {
-	r := resolver.NewImportExportResolver()
-
-	analyzer := analysis.NewFileAnalyzer()
-
-	result, parserErrs, err := analyzer.AnalyzeFile(path, r)
+func analyzeFile(analyzer analysis.Analyzer, path string, p cmd.VerbosePrinter) (*Names, *Names, error) {
+	result, parserErrs, err := analyzer.AnalyzeFile(path, resolver.NewImportExportResolver())
 
 	if err != nil {
 		return nil, nil, err

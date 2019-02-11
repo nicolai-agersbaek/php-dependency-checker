@@ -3,19 +3,20 @@ package dependency_checker
 import (
 	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/analysis"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/resolver"
 	"os"
 	"sync"
 )
 
-func ResolveImportsParallel(p cmd.VerbosePrinter, I []string) (NamesByFile, NamesByFile, error) {
+func ResolveImportsParallel(analyzer analysis.Analyzer, p cmd.VerbosePrinter, I []string) (NamesByFile, NamesByFile, error) {
 	const numAnalyzers = 5
 	const mode = analyzeImports
 
 	C := newCollector(mode)
 
-	err := resolveNamesParallel(p, I, numAnalyzers, C, mode)
+	err := resolveNamesParallel(analyzer, p, I, numAnalyzers, C, mode)
 
 	if err != nil {
 		return nil, nil, err
@@ -24,7 +25,7 @@ func ResolveImportsParallel(p cmd.VerbosePrinter, I []string) (NamesByFile, Name
 	return C.imports.Data(), C.exports.Data(), nil
 }
 
-func resolveNamesParallel(p cmd.VerbosePrinter, files []string, numAnalyzers int, c *collector, mode analysisMode) error {
+func resolveNamesParallel(analyzer analysis.Analyzer, p cmd.VerbosePrinter, files []string, numAnalyzers int, c *collector, mode analysisMode) error {
 	done := make(chan bool)
 	defer close(done)
 
@@ -36,7 +37,7 @@ func resolveNamesParallel(p cmd.VerbosePrinter, files []string, numAnalyzers int
 
 	for i := 0; i < numAnalyzers; i++ {
 		go func() {
-			digester(p, done, fileChan, resultChan)
+			digester(analyzer, p, done, fileChan, resultChan)
 			wg.Done()
 		}()
 	}
