@@ -4,6 +4,7 @@ import (
 	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/resolver"
 	"os"
 )
 
@@ -54,7 +55,7 @@ func resolveFileImportsSerialByFile(path string, v cmd.Verbosity) (*ImportsExpor
 
 	parserErrors := ParserErrors(parser.GetErrors())
 
-	resolver := NewNameResolver()
+	r := resolver.NewNameResolver()
 
 	if v >= cmd.VerbosityDebug && len(parserErrors) > 0 {
 		logParserErrors(path, parser.GetErrors())
@@ -63,9 +64,9 @@ func resolveFileImportsSerialByFile(path string, v cmd.Verbosity) (*ImportsExpor
 		rootNode := parser.GetRootNode()
 
 		// Resolve imports
-		rootNode.Walk(resolver)
-		resolver.clean()
+		rootNode.Walk(r)
+		r.Clean()
 	}
 
-	return NewImportsExports(resolver.Imports, resolver.Exports), err
+	return NewImportsExports(r.Imports, r.Exports), err
 }

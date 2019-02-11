@@ -1,4 +1,4 @@
-package dependency_checker
+package resolver
 
 import (
 	"github.com/z7zmey/php-parser/node"
@@ -24,7 +24,7 @@ func NewNameResolver() *NameResolver {
 	}
 }
 
-func (r *NameResolver) clean() {
+func (r *NameResolver) Clean() {
 	r.Imports.Clean()
 	r.Exports.Clean()
 }

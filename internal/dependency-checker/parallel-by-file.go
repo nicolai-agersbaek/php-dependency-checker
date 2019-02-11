@@ -6,6 +6,7 @@ import (
 	"github.com/z7zmey/php-parser/php7"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/resolver"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 	"sync"
@@ -179,7 +180,7 @@ func analyzeFile(path string, p cmd.VerbosePrinter) (*Names, *Names, error) {
 
 	parserErrors := parser.GetErrors()
 
-	resolver := NewNameResolver()
+	r := resolver.NewNameResolver()
 
 	if len(parserErrors) > 0 {
 		logParserErrorsV(path, parser.GetErrors(), p)
@@ -187,11 +188,11 @@ func analyzeFile(path string, p cmd.VerbosePrinter) (*Names, *Names, error) {
 		rootNode := parser.GetRootNode()
 
 		// Resolve imports
-		rootNode.Walk(resolver)
-		resolver.clean()
+		rootNode.Walk(r)
+		r.Clean()
 	}
 
-	return resolver.Imports, resolver.Exports, nil
+	return r.Imports, r.Exports, nil
 }
 
 func logParserErrorsV(path string, errors []*pErrors.Error, p cmd.VerbosePrinter) {

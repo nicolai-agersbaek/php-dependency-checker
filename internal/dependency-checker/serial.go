@@ -6,6 +6,7 @@ import (
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/files"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/resolver"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"os"
 )
@@ -89,7 +90,7 @@ func resolveFileImportsSerial(path string, v cmd.Verbosity) (*Names, *Names, err
 	// TODO: Return imports, exports and parserErr as a combined Result
 	parserErrors := parser.GetErrors()
 
-	resolver := NewNameResolver()
+	r := resolver.NewNameResolver()
 
 	if v >= cmd.VerbosityDebug && len(parserErrors) > 0 {
 		logParserErrors(path, parser.GetErrors())
@@ -97,9 +98,9 @@ func resolveFileImportsSerial(path string, v cmd.Verbosity) (*Names, *Names, err
 		rootNode := parser.GetRootNode()
 
 		// Resolve imports
-		rootNode.Walk(resolver)
-		resolver.clean()
+		rootNode.Walk(r)
+		r.Clean()
 	}
 
-	return resolver.Imports, resolver.Exports, nil
+	return r.Imports, r.Exports, nil
 }
