@@ -3,6 +3,7 @@ package dependency_checker
 import (
 	"errors"
 	"fmt"
+	"github.com/gosuri/uiprogress"
 	"github.com/spf13/cobra"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/checker"
@@ -74,14 +75,18 @@ func check(c *cobra.Command, args []string) {
 	p := getVerbosePrinter(c)
 	ch := checker.NewChecker()
 
+	uiprogress.Start()
+
 	start := time.Now()
 
 	// Calculate unexported uses.
 	R, S, err := ch.Run(checkInput, parallelMode, p)
+	elapsed := time.Now().Sub(start)
+
+	uiprogress.Stop()
+
 	cmd.CheckError(err)
 	//U, diff := doCheck(getResolver(parallelMode), p, importPaths, exportPaths)
-
-	elapsed := time.Now().Sub(start)
 
 	avgDuration := elapsed / time.Duration(S.FilesAnalyzed)
 	p.VLine(fmt.Sprintf("Elapsed: %s (avg. %s)", elapsed.String(), formatDuration(avgDuration)), cmd.VerbosityNormal)

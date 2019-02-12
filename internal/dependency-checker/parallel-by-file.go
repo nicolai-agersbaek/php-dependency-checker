@@ -11,7 +11,7 @@ import (
 	"sync"
 )
 
-func ResolveNamesParallelFromFiles(p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
+func ResolveNamesParallelFromFiles(inc func(), p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
 	const numAnalyzers = 5
 
 	analyzer := analysis.NewFileAnalyzer()
@@ -30,7 +30,7 @@ func ResolveNamesParallelFromFiles(p cmd.VerbosePrinter, I, E, B []string) (Name
 	for _, input := range analysisInput {
 		c := newCollector(input.mode)
 
-		err := resolveBothNames(analyzer, p, input.files, numAnalyzers, c)
+		err := resolveBothNames(analyzer, inc, p, input.files, numAnalyzers, c)
 
 		if err != nil {
 			return nil, nil, err
@@ -42,7 +42,7 @@ func ResolveNamesParallelFromFiles(p cmd.VerbosePrinter, I, E, B []string) (Name
 	return C.imports.Data(), C.exports.Data(), nil
 }
 
-func resolveBothNames(analyzer analysis.Analyzer, p cmd.VerbosePrinter, files []string, numAnalyzers int, c *collector) error {
+func resolveBothNames(analyzer analysis.Analyzer, inc func(), p cmd.VerbosePrinter, files []string, numAnalyzers int, c *collector) error {
 	done := make(chan bool)
 	defer close(done)
 
@@ -66,6 +66,7 @@ func resolveBothNames(analyzer analysis.Analyzer, p cmd.VerbosePrinter, files []
 
 	// Collect analyses
 	for r := range resultChan {
+		inc()
 		if r.Error != nil {
 			return r.Error
 		}

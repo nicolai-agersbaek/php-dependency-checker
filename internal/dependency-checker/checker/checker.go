@@ -2,6 +2,7 @@ package checker
 
 import (
 	"fmt"
+	"github.com/gosuri/uiprogress"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
@@ -33,11 +34,28 @@ func (c *Checker) Run(input *Input, parallel bool, p cmd.VerbosePrinter) (*Resul
 	I, E, B := dependency_checker.PartitionFileSets(importsFrom, exportsFrom)
 
 	numFiles := len(I) + len(E) + len(B)
-	if numFiles > 0 {
-		p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
+
+	if numFiles <= 0 {
+		return nil, nil, nil
 	}
 
-	r, err := runAnalysis(resolver, p, I, E, B)
+	p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
+
+	// Add progress bar
+	bar := uiprogress.AddBar(numFiles)
+
+	completedCount := func(b *uiprogress.Bar) string {
+		return fmt.Sprintf("%d/%d", b.Current(), b.Total)
+	}
+	bar.PrependCompleted()
+	bar.PrependFunc(completedCount)
+	bar.AppendElapsed()
+
+	inc := func() {
+		bar.Incr()
+	}
+
+	r, err := runAnalysis(resolver, inc, p, I, E, B)
 
 	if err != nil {
 		return nil, nil, err
@@ -52,7 +70,7 @@ func (c *Checker) Run(input *Input, parallel bool, p cmd.VerbosePrinter) (*Resul
 	return r, stats, err
 }
 
-type resolver func(p cmd.VerbosePrinter, I, E, B []string) (names.NamesByFile, names.NamesByFile, error)
+type resolver func(inc func(), p cmd.VerbosePrinter, I, E, B []string) (names.NamesByFile, names.NamesByFile, error)
 
 func getResolver(inParallel bool) resolver {
 	if inParallel {
@@ -62,8 +80,8 @@ func getResolver(inParallel bool) resolver {
 	return dependency_checker.ResolveNamesSerialFromFiles
 }
 
-func runAnalysis(r resolver, p cmd.VerbosePrinter, importsFrom, exportsFrom, bothFrom []string) (*Result, error) {
-	I, E, err := r(p, importsFrom, exportsFrom, bothFrom)
+func runAnalysis(r resolver, inc func(), p cmd.VerbosePrinter, importsFrom, exportsFrom, bothFrom []string) (*Result, error) {
+	I, E, err := r(inc, p, importsFrom, exportsFrom, bothFrom)
 
 	if err != nil {
 		return nil, err

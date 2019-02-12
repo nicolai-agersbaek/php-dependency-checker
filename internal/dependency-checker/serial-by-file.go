@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func ResolveNamesSerialFromFiles(p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
+func ResolveNamesSerialFromFiles(inc func(), p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
 	var err error
 
 	N := []NamesByFile{make(NamesByFile), make(NamesByFile)}
@@ -17,6 +17,7 @@ func ResolveNamesSerialFromFiles(p cmd.VerbosePrinter, I, E, B []string) (NamesB
 	for k, F := range [][]string{I, E, B} {
 		for _, f := range F {
 			names, err := resolveFileImportsSerialByFile(f, verbosity)
+			inc()
 
 			if err != nil {
 				break
