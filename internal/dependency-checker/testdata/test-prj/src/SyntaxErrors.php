@@ -14,15 +14,16 @@ use TestPrj\Somebar\SomeCls as SomeClsAlias;
  *
  * @api
  */
-class IncorrectNsCase
+class SyntaxErrors
 {
     
     /**
      * @param SomeClsAlias $some
      * @param SomeCls      $someCls
      */
-    public function __construct(SomeClsAlias $some, SomeCls $someCls)
+    public function __construct(SomeClsAlias $some, $someCls SomeCls)
     {
-    
+        $a
     }
+}
 }
