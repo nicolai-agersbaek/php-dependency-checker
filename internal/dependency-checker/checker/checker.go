@@ -1,8 +1,8 @@
 package checker
 
 import (
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/analysis"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 )
@@ -17,12 +17,12 @@ type ResultStats struct {
 }
 
 type Checker struct {
-	printer  cmd.VerbosePrinter
 	progress chan<- int
+	errs     chan<- *analysis.ParserErrors
 }
 
-func NewChecker(printer cmd.VerbosePrinter, progress chan<- int) *Checker {
-	return &Checker{printer, progress}
+func NewChecker(progress chan<- int, errs chan<- *analysis.ParserErrors) *Checker {
+	return &Checker{progress, errs}
 }
 
 func resolveFiles(input *Input) ([]string, []string, []string) {
@@ -58,6 +58,7 @@ func (c *Checker) Run(input *Input, parallel bool, nFiles func(int)) (*Result, *
 	r, err := c.runAnalysis(resolver, inc, I, E, B)
 
 	close(c.progress)
+	close(c.errs)
 
 	if err != nil {
 		return nil, nil, err
@@ -72,7 +73,7 @@ func (c *Checker) Run(input *Input, parallel bool, nFiles func(int)) (*Result, *
 	return r, stats, err
 }
 
-type resolver func(inc func(), p cmd.VerbosePrinter, I, E, B []string) (names.NamesByFile, names.NamesByFile, error)
+type resolver func(inc func(), errs chan<- *analysis.ParserErrors, I, E, B []string) (names.NamesByFile, names.NamesByFile, error)
 
 func getResolver(inParallel bool) resolver {
 	if inParallel {
@@ -83,7 +84,7 @@ func getResolver(inParallel bool) resolver {
 }
 
 func (c *Checker) runAnalysis(r resolver, inc func(), importsFrom, exportsFrom, bothFrom []string) (*Result, error) {
-	I, E, err := r(inc, c.printer, importsFrom, exportsFrom, bothFrom)
+	I, E, err := r(inc, c.errs, importsFrom, exportsFrom, bothFrom)
 
 	if err != nil {
 		return nil, err

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/gosuri/uiprogress"
 	"github.com/spf13/cobra"
+	pErrors "github.com/z7zmey/php-parser/errors"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/analysis"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/checker"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
@@ -74,8 +76,9 @@ func check(c *cobra.Command, args []string) {
 
 	p := getVerbosePrinter(c)
 	progressChan := make(chan int)
+	parserErrs := make(chan *analysis.ParserErrors)
 	started := false
-	ch := checker.NewChecker(p, progressChan)
+	ch := checker.NewChecker(progressChan, parserErrs)
 
 	uiprogress.Start()
 
@@ -96,6 +99,8 @@ func check(c *cobra.Command, args []string) {
 			}(bar, progressChan)
 		}
 	}
+
+	go printParserErrors(p, parserErrs)
 
 	// Calculate unexported uses.
 	start := time.Now()
@@ -118,6 +123,25 @@ func check(c *cobra.Command, args []string) {
 		panic(newUnexportedClsErr())
 	} else {
 		p.VLine("No unexported uses found!", cmd.VerbosityNormal)
+	}
+}
+
+func printParserErrors(printer cmd.VerbosePrinter, errs <-chan *analysis.ParserErrors) {
+	for e := range errs {
+		if e != nil {
+			logParserErrorsV(e.Path, e.Errors, printer)
+		}
+	}
+}
+
+func logParserErrorsV(path string, errors []*pErrors.Error, p cmd.VerbosePrinter) {
+	v := cmd.VerbosityDebug
+	indent := "   "
+	p.VLine("", v)
+	p.VLine(path+":", v)
+
+	for _, e := range errors {
+		p.VLine(indent+e.String(), v)
 	}
 }
 

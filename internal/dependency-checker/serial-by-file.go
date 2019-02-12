@@ -2,21 +2,20 @@ package dependency_checker
 
 import (
 	"github.com/z7zmey/php-parser/php7"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/analysis"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/resolver"
 	"os"
 )
 
-func ResolveNamesSerialFromFiles(inc func(), p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
+func ResolveNamesSerialFromFiles(inc func(), errs chan<- *analysis.ParserErrors, I, E, B []string) (NamesByFile, NamesByFile, error) {
 	var err error
 
 	N := []NamesByFile{make(NamesByFile), make(NamesByFile)}
-	verbosity := p.GetVerbosity()
 
 	for k, F := range [][]string{I, E, B} {
 		for _, f := range F {
-			names, err := resolveFileImportsSerialByFile(f, verbosity)
+			names, err := resolveFileImportsSerialByFile(f, errs)
 			inc()
 
 			if err != nil {
@@ -38,7 +37,7 @@ func ResolveNamesSerialFromFiles(inc func(), p cmd.VerbosePrinter, I, E, B []str
 	return N[0], N[1], err
 }
 
-func resolveFileImportsSerialByFile(path string, v cmd.Verbosity) (*ImportsExports, error) {
+func resolveFileImportsSerialByFile(path string, errs chan<- *analysis.ParserErrors) (*ImportsExports, error) {
 	src, err := os.Open(path)
 
 	if err != nil {
@@ -53,21 +52,19 @@ func resolveFileImportsSerialByFile(path string, v cmd.Verbosity) (*ImportsExpor
 
 	parser := php7.NewParser(src, path)
 	parser.Parse()
+	pErrs := parser.GetErrors()
 
-	parserErrors := ParserErrors(parser.GetErrors())
+	if len(pErrs) > 0 {
+		errs <- analysis.NewParserErrors(path, pErrs)
+		return nil, nil
+	}
 
 	r := resolver.NewImportExportResolver()
+	rootNode := parser.GetRootNode()
 
-	if v >= cmd.VerbosityDebug && len(parserErrors) > 0 {
-		logParserErrors(path, parser.GetErrors())
-		err = parserErrors
-	} else {
-		rootNode := parser.GetRootNode()
-
-		// Resolve imports
-		rootNode.Walk(r)
-		r.Clean()
-	}
+	// Resolve imports
+	rootNode.Walk(r)
+	r.Clean()
 
 	return NewImportsExports(r.Imports, r.Exports), err
 }

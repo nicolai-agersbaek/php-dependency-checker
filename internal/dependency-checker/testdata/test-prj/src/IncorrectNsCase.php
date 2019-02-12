@@ -23,5 +23,6 @@ class IncorrectNsCase
      */
     public function __construct(SomeClsAlias $some, SomeCls $someCls)
     {
+        $a
     }
 }

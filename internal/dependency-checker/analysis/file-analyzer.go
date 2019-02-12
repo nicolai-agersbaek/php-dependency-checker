@@ -17,8 +17,13 @@ func NewFileAnalyzer() *FileAnalyzer {
 func (a *FileAnalyzer) Analyze(src io.Reader, path string, r resolver.Resolver) (*Analysis, *ParserErrors, error) {
 	parser := php7.NewParser(src, path)
 	parser.Parse()
+	pErrs := parser.GetErrors()
 
-	parserErrors := NewParserErrors(path, parser.GetErrors())
+	var parserErrors *ParserErrors
+
+	if len(pErrs) > 0 {
+		parserErrors = NewParserErrors(path, pErrs)
+	}
 
 	rootNode := parser.GetRootNode()
 

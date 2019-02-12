@@ -2,16 +2,13 @@ package dependency_checker
 
 import (
 	"errors"
-	pErrors "github.com/z7zmey/php-parser/errors"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/analysis"
 	. "gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/resolver"
-	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 	"sync"
 )
 
-func ResolveNamesParallelFromFiles(inc func(), p cmd.VerbosePrinter, I, E, B []string) (NamesByFile, NamesByFile, error) {
+func ResolveNamesParallelFromFiles(inc func(), errs chan<- *analysis.ParserErrors, I, E, B []string) (NamesByFile, NamesByFile, error) {
 	const numAnalyzers = 5
 
 	analyzer := analysis.NewFileAnalyzer()
@@ -30,7 +27,7 @@ func ResolveNamesParallelFromFiles(inc func(), p cmd.VerbosePrinter, I, E, B []s
 	for _, input := range analysisInput {
 		c := newCollector(input.mode)
 
-		err := resolveBothNames(analyzer, inc, p, input.files, numAnalyzers, c)
+		err := resolveBothNames(analyzer, inc, errs, input.files, numAnalyzers, c)
 
 		if err != nil {
 			return nil, nil, err
@@ -42,7 +39,7 @@ func ResolveNamesParallelFromFiles(inc func(), p cmd.VerbosePrinter, I, E, B []s
 	return C.imports.Data(), C.exports.Data(), nil
 }
 
-func resolveBothNames(analyzer analysis.Analyzer, inc func(), p cmd.VerbosePrinter, files []string, numAnalyzers int, c *collector) error {
+func resolveBothNames(analyzer analysis.Analyzer, inc func(), errs chan<- *analysis.ParserErrors, files []string, numAnalyzers int, c *collector) error {
 	done := make(chan bool)
 	defer close(done)
 
@@ -54,7 +51,7 @@ func resolveBothNames(analyzer analysis.Analyzer, inc func(), p cmd.VerbosePrint
 
 	for i := 0; i < numAnalyzers; i++ {
 		go func() {
-			digester(analyzer, p, done, fileChan, resultChan)
+			digester(analyzer, done, fileChan, resultChan, errs)
 			wg.Done()
 		}()
 	}
@@ -152,9 +149,9 @@ func walkFiles(done <-chan bool, files []string) (<-chan string, <-chan error) {
 	return paths, errChan
 }
 
-func digester(analyzer analysis.Analyzer, printer cmd.VerbosePrinter, done <-chan bool, paths <-chan string, results chan<- *FileAnalysis) {
+func digester(analyzer analysis.Analyzer, done <-chan bool, paths <-chan string, results chan<- *FileAnalysis, errs chan<- *analysis.ParserErrors) {
 	for p := range paths {
-		imports, exports, err := analyzeFile(analyzer, p, printer)
+		imports, exports, err := analyzeFile(analyzer, p, errs)
 
 		select {
 		case results <- NewFileAnalysisExp(p, imports, exports, err):
@@ -164,38 +161,14 @@ func digester(analyzer analysis.Analyzer, printer cmd.VerbosePrinter, done <-cha
 	}
 }
 
-func analyzeFile(analyzer analysis.Analyzer, path string, p cmd.VerbosePrinter) (*Names, *Names, error) {
+func analyzeFile(analyzer analysis.Analyzer, path string, errs chan<- *analysis.ParserErrors) (*Names, *Names, error) {
 	result, parserErrs, err := analyzer.AnalyzeFile(path, resolver.NewImportExportResolver())
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if len(parserErrs.Errors) > 0 {
-		logParserErrorsV(parserErrs.Path, parserErrs.Errors, p)
-	}
+	errs <- parserErrs
 
 	return result.Imports, result.Exports, nil
-}
-
-func logParserErrorsV(path string, errors []*pErrors.Error, p cmd.VerbosePrinter) {
-	v := cmd.VerbosityDebug
-	indent := "   "
-	p.VLine("", v)
-	p.VLine(path+":", v)
-
-	for _, e := range errors {
-		p.VLine(indent+e.String(), v)
-	}
-}
-
-// PartitionFileSets partitions importFiles and exportFiles into disjunct sets I,
-// E and B, representing the files to be imported, exported and both, respectively.
-func PartitionFileSets(importFiles, exportFiles []string) (I, E, B []string) {
-	// FIXME: Missing tests!
-	I = slices.DiffString(importFiles, exportFiles)
-	E = slices.DiffString(exportFiles, importFiles)
-	B = slices.IntersectionString(importFiles, exportFiles)
-
-	return I, E, B
 }
