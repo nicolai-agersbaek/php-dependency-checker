@@ -22,7 +22,11 @@ type printOptions struct {
 
 var printOpts = &printOptions{5, 10}
 
-var parallelMode = false
+type checkCmdOptions struct {
+	parallel bool
+}
+
+var checkCmdOpts = &checkCmdOptions{}
 
 func init() {
 	excludeDesc := `Directory or file to exclude from analysis. May be
@@ -45,7 +49,7 @@ imports. May be specified multiple times.`
 specified multiple times.`
 	checkCmd.Flags().StringArrayVarP(&checkInput.ExcludedImports, "exclude-imports", "I", nil, excludedImportsDesc)
 
-	checkCmd.Flags().BoolVarP(&parallelMode, "parallel", "p", false, "Perform parallel name resolution.")
+	checkCmd.Flags().BoolVarP(&checkCmdOpts.parallel, "parallel", "p", true, "Perform parallel name resolution.")
 
 	maxFilesDesc := `Maximum number of files to display in error summary.
 If negative, all files will be shown.`
@@ -59,7 +63,7 @@ summary. If negative, all lines will be shown.`
 }
 
 var checkCmd = &cobra.Command{
-	Use:   "check (<dir>|<file>) [(<dir>|<file>)] [,...]",
+	Use:   "check (<dir>|<file>) [(<dir>|<file>), ...]",
 	Short: "Check dependencies for directories and/or files.",
 	Args:  cobra.MinimumNArgs(1),
 	Run:   check,
@@ -104,7 +108,7 @@ func check(c *cobra.Command, args []string) {
 
 	// Calculate unexported uses.
 	start := time.Now()
-	R, S, err := ch.Run(checkInput, parallelMode, nFiles)
+	R, S, err := ch.Run(checkInput, checkCmdOpts.parallel, nFiles)
 	elapsed := time.Now().Sub(start)
 
 	uiprogress.Stop()
@@ -112,7 +116,7 @@ func check(c *cobra.Command, args []string) {
 	cmd.CheckError(err)
 
 	avgDuration := elapsed / time.Duration(S.FilesAnalyzed)
-	p.VLine(fmt.Sprintf("Elapsed: %.2fs (avg. %s)", elapsed.Seconds(), formatDuration(avgDuration)), cmd.VerbosityNormal)
+	p.VLine(fmt.Sprintf("Elapsed: %.2fs (avg. %s)", elapsed.Seconds(), cmd.FormatDuration(avgDuration)), cmd.VerbosityNormal)
 
 	if S.UniqueClsErrs > 0 {
 		printLnf("Found %d unique errors in %d files.", S.UniqueClsErrs, S.FilesWithErrs)
@@ -197,22 +201,4 @@ func printByFile(p cmd.Printer, N NamesByFile, maxFiles, maxLines int) {
 			i++
 		}
 	}
-}
-
-func formatDuration(d time.Duration) string {
-	// TODO: Move to cmd.printer
-	suffix := "ns"
-
-	if d > time.Second {
-		d = d / time.Second
-		suffix = "s"
-	} else if d > 10*time.Millisecond {
-		d = d / time.Millisecond
-		suffix = "ms"
-	} else if d > 10*time.Microsecond {
-		d = d / time.Microsecond
-		suffix = "μs"
-	}
-
-	return fmt.Sprintf("%d"+suffix, d)
 }
