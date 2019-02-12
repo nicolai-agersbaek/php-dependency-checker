@@ -109,6 +109,7 @@ func (c *Checker) runAnalysis(r resolver, inc func(), importsFrom, exportsFrom, 
 }
 
 func resolveClassImportsExports(imports, exports names.NamesByFile) (*names.Names, *names.Names) {
+	// FIXME: Missing tests!
 	// Combine all analyses.
 	I := names.ConsolidateIntoClasses(names.ConvertToNames(imports))
 
