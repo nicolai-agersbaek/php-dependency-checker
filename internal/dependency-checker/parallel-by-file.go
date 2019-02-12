@@ -188,23 +188,6 @@ func logParserErrorsV(path string, errors []*pErrors.Error, p cmd.VerbosePrinter
 	}
 }
 
-func resolveFiles(importPaths, exportPaths []string) ([]string, []string, error) {
-	// Resolve the files given by import and export paths
-	P := make([][]string, 2, 2)
-
-	for k, paths := range [][]string{importPaths, exportPaths} {
-		F, err := getPhpFilesSerial(paths)
-
-		if err != nil {
-			return nil, nil, err
-		}
-
-		P[k] = slices.UniqueString(F)
-	}
-
-	return P[0], P[1], nil
-}
-
 // PartitionFileSets partitions importFiles and exportFiles into disjunct sets I,
 // E and B, representing the files to be imported, exported and both, respectively.
 func PartitionFileSets(importFiles, exportFiles []string) (I, E, B []string) {
