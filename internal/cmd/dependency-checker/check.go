@@ -76,9 +76,24 @@ func newUnexportedClsErr() error {
 }
 
 func check(c *cobra.Command, args []string) {
+	p := getVerbosePrinter(c)
+	R, S := runCheck(args, p, checkCmdOpts.parallel)
+
+	if S.UniqueClsErrs > 0 {
+		printLnf("Found %d unique errors in %d files.", S.UniqueClsErrs, S.FilesWithErrs)
+
+		printByFile(p, *R.DiffByFile, printOpts.maxFiles, printOpts.maxLines)
+
+		//p.VLinesWithTitleMax("Unexported uses (classes):", diff.Classes, printOpts.maxLines, cmd.VerbosityNone)
+		panic(newUnexportedClsErr())
+	} else {
+		p.VLine("No unexported uses found!", cmd.VerbosityNormal)
+	}
+}
+
+func runCheck(args []string, p cmd.VerbosePrinter, parallel bool) (*checker.Result, *checker.ResultStats) {
 	checkInput.Sources = args
 
-	p := getVerbosePrinter(c)
 	progressChan := make(chan int)
 	parserErrs := make(chan *analysis.ParserErrors)
 	started := false
@@ -108,7 +123,7 @@ func check(c *cobra.Command, args []string) {
 
 	// Calculate unexported uses.
 	start := time.Now()
-	R, S, err := ch.Run(checkInput, checkCmdOpts.parallel, nFiles)
+	R, S, err := ch.Run(checkInput, parallel, nFiles)
 	elapsed := time.Now().Sub(start)
 
 	uiprogress.Stop()
@@ -118,16 +133,7 @@ func check(c *cobra.Command, args []string) {
 	avgDuration := elapsed / time.Duration(S.FilesAnalyzed)
 	p.VLine(fmt.Sprintf("Elapsed: %.2fs (avg. %s)", elapsed.Seconds(), cmd.FormatDuration(avgDuration)), cmd.VerbosityNormal)
 
-	if S.UniqueClsErrs > 0 {
-		printLnf("Found %d unique errors in %d files.", S.UniqueClsErrs, S.FilesWithErrs)
-
-		printByFile(p, *R.DiffByFile, printOpts.maxFiles, printOpts.maxLines)
-
-		//p.VLinesWithTitleMax("Unexported uses (classes):", diff.Classes, printOpts.maxLines, cmd.VerbosityNone)
-		panic(newUnexportedClsErr())
-	} else {
-		p.VLine("No unexported uses found!", cmd.VerbosityNormal)
-	}
+	return R, S
 }
 
 func printParserErrors(printer cmd.VerbosePrinter, errs <-chan *analysis.ParserErrors) {
