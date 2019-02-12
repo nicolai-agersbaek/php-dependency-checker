@@ -73,23 +73,41 @@ func check(c *cobra.Command, args []string) {
 	checkInput.Sources = args
 
 	p := getVerbosePrinter(c)
-	ch := checker.NewChecker()
+	progressChan := make(chan int)
+	started := false
+	ch := checker.NewChecker(p, progressChan)
 
 	uiprogress.Start()
 
-	start := time.Now()
+	var bar *uiprogress.Bar
+
+	nFiles := func(numFiles int) {
+		if !started && numFiles > 0 {
+			started = true
+
+			p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
+
+			bar = progressBar(numFiles)
+
+			go func(bar *uiprogress.Bar, progress <-chan int) {
+				for range progress {
+					bar.Incr()
+				}
+			}(bar, progressChan)
+		}
+	}
 
 	// Calculate unexported uses.
-	R, S, err := ch.Run(checkInput, parallelMode, p)
+	start := time.Now()
+	R, S, err := ch.Run(checkInput, parallelMode, nFiles)
 	elapsed := time.Now().Sub(start)
 
 	uiprogress.Stop()
 
 	cmd.CheckError(err)
-	//U, diff := doCheck(getResolver(parallelMode), p, importPaths, exportPaths)
 
 	avgDuration := elapsed / time.Duration(S.FilesAnalyzed)
-	p.VLine(fmt.Sprintf("Elapsed: %s (avg. %s)", elapsed.String(), formatDuration(avgDuration)), cmd.VerbosityNormal)
+	p.VLine(fmt.Sprintf("Elapsed: %.2fs (avg. %s)", elapsed.Seconds(), formatDuration(avgDuration)), cmd.VerbosityNormal)
 
 	if S.UniqueClsErrs > 0 {
 		printLnf("Found %d unique errors in %d files.", S.UniqueClsErrs, S.FilesWithErrs)
@@ -101,6 +119,20 @@ func check(c *cobra.Command, args []string) {
 	} else {
 		p.VLine("No unexported uses found!", cmd.VerbosityNormal)
 	}
+}
+
+func progressBar(total int) *uiprogress.Bar {
+	// Add progress bar
+	bar := uiprogress.AddBar(total)
+
+	completedCount := func(b *uiprogress.Bar) string {
+		return fmt.Sprintf("%d/%d", b.Current(), b.Total)
+	}
+	bar.PrependCompleted()
+	bar.PrependFunc(completedCount)
+	bar.AppendElapsed()
+
+	return bar
 }
 
 func printLnf(format string, a ...interface{}) {

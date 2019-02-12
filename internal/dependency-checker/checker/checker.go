@@ -1,11 +1,10 @@
 package checker
 
 import (
-	"fmt"
-	"github.com/gosuri/uiprogress"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/cmd"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
+	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
 )
 
 type Result struct {
@@ -18,44 +17,47 @@ type ResultStats struct {
 }
 
 type Checker struct {
+	printer  cmd.VerbosePrinter
+	progress chan<- int
 }
 
-func NewChecker() *Checker {
-	return &Checker{}
+func NewChecker(printer cmd.VerbosePrinter, progress chan<- int) *Checker {
+	return &Checker{printer, progress}
 }
 
-func (c *Checker) Run(input *Input, parallel bool, p cmd.VerbosePrinter) (*Result, *ResultStats, error) {
+func resolveFiles(input *Input) ([]string, []string, []string) {
+	// FIXME: Missing tests!
+	importFiles := input.ImportsFromFiles()
+	exportFiles := input.ExportsFromFiles()
+
+	I := slices.DiffString(importFiles, exportFiles)
+	E := slices.DiffString(exportFiles, importFiles)
+	B := slices.IntersectionString(importFiles, exportFiles)
+
+	return I, E, B
+}
+
+func (c *Checker) Run(input *Input, parallel bool, nFiles func(int)) (*Result, *ResultStats, error) {
 	// Get appropriate resolver
 	resolver := getResolver(parallel)
 
 	// Resolve files to analyze
-	importsFrom := input.ImportsFromFiles()
-	exportsFrom := input.ExportsFromFiles()
-	I, E, B := dependency_checker.PartitionFileSets(importsFrom, exportsFrom)
+	I, E, B := resolveFiles(input)
 
 	numFiles := len(I) + len(E) + len(B)
+	nFiles(numFiles)
 
 	if numFiles <= 0 {
 		return nil, nil, nil
 	}
 
-	p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
-
-	// Add progress bar
-	bar := uiprogress.AddBar(numFiles)
-
-	completedCount := func(b *uiprogress.Bar) string {
-		return fmt.Sprintf("%d/%d", b.Current(), b.Total)
-	}
-	bar.PrependCompleted()
-	bar.PrependFunc(completedCount)
-	bar.AppendElapsed()
-
 	inc := func() {
-		bar.Incr()
+		c.progress <- 1
 	}
 
-	r, err := runAnalysis(resolver, inc, p, I, E, B)
+	r, err := c.runAnalysis(resolver, inc, I, E, B)
+
+	close(c.progress)
 
 	if err != nil {
 		return nil, nil, err
@@ -80,8 +82,8 @@ func getResolver(inParallel bool) resolver {
 	return dependency_checker.ResolveNamesSerialFromFiles
 }
 
-func runAnalysis(r resolver, inc func(), p cmd.VerbosePrinter, importsFrom, exportsFrom, bothFrom []string) (*Result, error) {
-	I, E, err := r(inc, p, importsFrom, exportsFrom, bothFrom)
+func (c *Checker) runAnalysis(r resolver, inc func(), importsFrom, exportsFrom, bothFrom []string) (*Result, error) {
+	I, E, err := r(inc, c.printer, importsFrom, exportsFrom, bothFrom)
 
 	if err != nil {
 		return nil, err
