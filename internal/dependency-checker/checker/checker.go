@@ -1,10 +1,13 @@
 package checker
 
 import (
+	"fmt"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/analysis"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/dependency-checker/names"
 	"gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/internal/util/slices"
+	"os"
+	"strings"
 )
 
 type Result struct {
@@ -37,9 +40,11 @@ func resolveFiles(input *Input) ([]string, []string, []string) {
 	return I, E, B
 }
 
-func (c *Checker) Run(input *Input, parallel bool, nFiles func(int)) (*Result, *ResultStats, error) {
+func (c *Checker) Run(input *Input, serial, ignoreGlobals bool, nFiles func(int)) (*Result, *ResultStats, error) {
+	fmt.Printf("Checker.Run: ignoreGlobals = %v\n", ignoreGlobals)
+
 	// Get appropriate resolver
-	resolver := getResolver(parallel)
+	resolver := getResolver(serial)
 
 	// Resolve files to analyze
 	I, E, B := resolveFiles(input)
@@ -55,7 +60,7 @@ func (c *Checker) Run(input *Input, parallel bool, nFiles func(int)) (*Result, *
 		c.progress <- 1
 	}
 
-	r, err := c.runAnalysis(resolver, inc, I, E, B)
+	r, err := c.runAnalysis(resolver, inc, ignoreGlobals, I, E, B)
 
 	close(c.progress)
 	close(c.errs)
@@ -75,19 +80,25 @@ func (c *Checker) Run(input *Input, parallel bool, nFiles func(int)) (*Result, *
 
 type resolver func(inc func(), errs chan<- *analysis.ParserErrors, I, E, B []string) (names.NamesByFile, names.NamesByFile, error)
 
-func getResolver(inParallel bool) resolver {
-	if inParallel {
-		return dependency_checker.ResolveNamesParallelFromFiles
+func getResolver(inSerial bool) resolver {
+	if inSerial {
+		return dependency_checker.ResolveNamesSerialFromFiles
 	}
 
-	return dependency_checker.ResolveNamesSerialFromFiles
+	return dependency_checker.ResolveNamesParallelFromFiles
 }
 
-func (c *Checker) runAnalysis(r resolver, inc func(), importsFrom, exportsFrom, bothFrom []string) (*Result, error) {
+func (c *Checker) runAnalysis(r resolver, inc func(), ignoreGlobals bool, importsFrom, exportsFrom, bothFrom []string) (*Result, error) {
 	I, E, err := r(inc, c.errs, importsFrom, exportsFrom, bothFrom)
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Filter out globals
+	if ignoreGlobals {
+		I = removeGlobalsFromNamesByFile(I)
+		E = removeGlobalsFromNamesByFile(E)
 	}
 
 	// Combine all analyses.
@@ -118,4 +129,52 @@ func resolveClassImportsExports(imports, exports names.NamesByFile) (*names.Name
 	E = names.ConsolidateIntoClasses(E)
 
 	return I, E
+}
+
+func removeGlobalsFromNamesByFile(N names.NamesByFile) names.NamesByFile {
+	filtered := make(names.NamesByFile)
+
+	for k, nn := range N {
+		nn = removeGlobalsFromNames(nn)
+
+		if !nn.Empty() {
+			filtered[k] = nn
+
+			if len(nn.Classes) != len(N[k].Classes) {
+				fmt.Println()
+				fmt.Println()
+				fmt.Println()
+
+				fmt.Printf("nn.Classes = \n%v\n", nn.Classes)
+				fmt.Printf("nn.Classes = \n%v\n", N[k].Classes)
+
+				fmt.Println()
+				fmt.Println()
+				fmt.Println()
+
+				os.Exit(1)
+			}
+		}
+	}
+
+	return filtered
+}
+
+func removeGlobalsFromNames(N *names.Names) *names.Names {
+	N.Functions = filterOutGlobals(N.Functions)
+	N.Classes = filterOutGlobals(N.Classes)
+	N.Interfaces = filterOutGlobals(N.Interfaces)
+	N.Traits = filterOutGlobals(N.Traits)
+	N.Constants = filterOutGlobals(N.Constants)
+	N.Namespaces = filterOutGlobals(N.Namespaces)
+
+	return N
+}
+
+func filterOutGlobals(S []string) []string {
+	filter := func(n string) bool {
+		return strings.Contains(n, names.NamespaceSeparator)
+	}
+
+	return slices.FilterString(S, filter)
 }

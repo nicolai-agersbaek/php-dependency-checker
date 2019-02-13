@@ -23,11 +23,21 @@ type printOptions struct {
 
 var printOpts = &printOptions{5, 10, false}
 
+type analysisCmdOptions struct {
+	serial, ignoreGlobals bool
+}
+
+var analysisCmdOpts = &analysisCmdOptions{false, false}
+
 type checkCmdOptions struct {
-	parallel bool
 }
 
 var checkCmdOpts = &checkCmdOptions{}
+
+func addAnalysisOptions(c *cobra.Command) {
+	c.Flags().BoolVarP(&analysisCmdOpts.serial, "serial", "P", analysisCmdOpts.serial, "Perform serial name resolution.")
+	c.Flags().BoolVarP(&analysisCmdOpts.ignoreGlobals, "ignore-globals", "G", analysisCmdOpts.ignoreGlobals, "Ignore 'global' names during analysis.")
+}
 
 func init() {
 	excludeDesc := `Directory or file to exclude from analysis. May be
@@ -50,8 +60,6 @@ imports. May be specified multiple times.`
 specified multiple times.`
 	checkCmd.Flags().StringArrayVarP(&checkInput.ExcludedImports, "exclude-imports", "I", nil, excludedImportsDesc)
 
-	checkCmd.Flags().BoolVarP(&checkCmdOpts.parallel, "parallel", "p", true, "Perform parallel name resolution.")
-
 	checkCmd.Flags().BoolVar(&printOpts.disableProgressBar, "no-progress", printOpts.disableProgressBar, "Disable progress-bar in output.")
 
 	maxFilesDesc := `Maximum number of files to display in error summary.
@@ -61,6 +69,8 @@ If negative, all files will be shown.`
 	maxLinesDesc := `Maximum number of lines per file to display in error
 summary. If negative, all lines will be shown.`
 	checkCmd.Flags().IntVar(&printOpts.maxLines, "max-lines", printOpts.maxLines, maxLinesDesc)
+
+	addAnalysisOptions(checkCmd)
 
 	rootCmd.AddCommand(checkCmd)
 }
@@ -80,7 +90,7 @@ func newUnexportedClsErr() errUnexportedClasses {
 
 func check(c *cobra.Command, args []string) {
 	p := getVerbosePrinter(c)
-	R, S := runCheck(args, p, checkCmdOpts.parallel, printOpts.disableProgressBar)
+	R, S := runCheck(args, p, analysisCmdOpts, printOpts.disableProgressBar)
 
 	if S.UniqueClsErrs > 0 {
 		printLnf("Found %d unique errors in %d files.", S.UniqueClsErrs, S.FilesWithErrs)
@@ -94,7 +104,8 @@ func check(c *cobra.Command, args []string) {
 	}
 }
 
-func runCheck(args []string, p cmd.VerbosePrinter, parallel, noProgress bool) (*checker.Result, *checker.ResultStats) {
+func runCheck(args []string, p cmd.VerbosePrinter, opts *analysisCmdOptions, noProgress bool) (*checker.Result, *checker.ResultStats) {
+	fmt.Printf("runCheck: ignoreGlobals = %v\n", opts.ignoreGlobals)
 	checkInput.Sources = args
 
 	progressChan := make(chan int)
@@ -124,7 +135,8 @@ func runCheck(args []string, p cmd.VerbosePrinter, parallel, noProgress bool) (*
 
 	// Calculate unexported uses.
 	start := time.Now()
-	R, S, err := ch.Run(checkInput, parallel, nFiles)
+	fmt.Printf("runCheck: ignoreGlobals = %v\n", opts.ignoreGlobals)
+	R, S, err := ch.Run(checkInput, opts.serial, opts.ignoreGlobals, nFiles)
 	elapsed := time.Now().Sub(start)
 
 	uiprogress.Stop()

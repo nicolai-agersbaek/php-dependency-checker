@@ -8,7 +8,6 @@ import (
 )
 
 type importsCmdOptions struct {
-	parallel       bool
 	excludeBuiltIn bool
 }
 
@@ -16,7 +15,9 @@ var importsCmdOpts = &importsCmdOptions{}
 
 func init() {
 	importsCmd.Flags().BoolVarP(&importsCmdOpts.excludeBuiltIn, "exclude-native", "x", true, "Exclude built-in PHP names from results.")
-	importsCmd.Flags().BoolVarP(&importsCmdOpts.parallel, "parallel", "p", true, "Perform parallel name resolution.")
+	importsCmd.Flags().BoolVar(&printOpts.disableProgressBar, "no-progress", printOpts.disableProgressBar, "Disable progress-bar in output.")
+
+	addAnalysisOptions(importsCmd)
 
 	rootCmd.AddCommand(importsCmd)
 }
@@ -30,7 +31,7 @@ var importsCmd = &cobra.Command{
 
 func imports(c *cobra.Command, args []string) {
 	p := getVerbosePrinter(c)
-	R, _ := runCheck(args, p, importsCmdOpts.parallel, printOpts.disableProgressBar)
+	R, _ := runCheck(args, p, analysisCmdOpts, printOpts.disableProgressBar)
 
 	imports := R.Imports
 

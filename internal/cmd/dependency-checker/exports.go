@@ -6,13 +6,13 @@ import (
 )
 
 type exportsCmdOptions struct {
-	parallel bool
 }
 
 var exportsCmdOpts = &exportsCmdOptions{}
 
 func init() {
-	exportsCmd.Flags().BoolVarP(&exportsCmdOpts.parallel, "parallel", "p", true, "Perform parallel name resolution.")
+	addAnalysisOptions(exportsCmd)
+	exportsCmd.Flags().BoolVar(&printOpts.disableProgressBar, "no-progress", printOpts.disableProgressBar, "Disable progress-bar in output.")
 
 	rootCmd.AddCommand(exportsCmd)
 }
@@ -26,7 +26,7 @@ var exportsCmd = &cobra.Command{
 
 func exports(c *cobra.Command, args []string) {
 	p := getVerbosePrinter(c)
-	R, _ := runCheck(args, p, exportsCmdOpts.parallel, printOpts.disableProgressBar)
+	R, _ := runCheck(args, p, analysisCmdOpts, printOpts.disableProgressBar)
 
 	printUses(p, "Exports", R.Exports.Diff(names.GetBuiltInNames()))
 }
