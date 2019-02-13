@@ -39,6 +39,7 @@ build:
         - ln -s /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker /go/src/_/builds/smartweb/proj/php-dependency-checker
         - cd /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker
         - make build
+        - ls -lah
     artifacts:
         paths:
             - bin/php-dependency-checker
