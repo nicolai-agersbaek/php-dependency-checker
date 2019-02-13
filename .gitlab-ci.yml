@@ -62,7 +62,6 @@ artifact:latest:
         name: cgswong/aws:aws
         entrypoint: [""]
     script:
-        - 'ls -lah'
         - 'aws s3 cp --acl public-read php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-latest'
         - "aws s3 cp --acl public-read php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
     dependencies:
