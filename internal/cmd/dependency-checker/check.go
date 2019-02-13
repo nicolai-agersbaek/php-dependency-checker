@@ -105,7 +105,6 @@ func check(c *cobra.Command, args []string) {
 }
 
 func runCheck(args []string, p cmd.VerbosePrinter, opts *analysisCmdOptions, noProgress bool) (*checker.Result, *checker.ResultStats) {
-	fmt.Printf("runCheck: ignoreGlobals = %v\n", opts.ignoreGlobals)
 	checkInput.Sources = args
 
 	progressChan := make(chan int)
@@ -135,7 +134,6 @@ func runCheck(args []string, p cmd.VerbosePrinter, opts *analysisCmdOptions, noP
 
 	// Calculate unexported uses.
 	start := time.Now()
-	fmt.Printf("runCheck: ignoreGlobals = %v\n", opts.ignoreGlobals)
 	R, S, err := ch.Run(checkInput, opts.serial, opts.ignoreGlobals, nFiles)
 	elapsed := time.Now().Sub(start)
 

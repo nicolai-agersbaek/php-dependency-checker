@@ -41,8 +41,6 @@ func resolveFiles(input *Input) ([]string, []string, []string) {
 }
 
 func (c *Checker) Run(input *Input, serial, ignoreGlobals bool, nFiles func(int)) (*Result, *ResultStats, error) {
-	fmt.Printf("Checker.Run: ignoreGlobals = %v\n", ignoreGlobals)
-
 	// Get appropriate resolver
 	resolver := getResolver(serial)
 
