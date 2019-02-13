@@ -39,10 +39,10 @@ build:
         - ln -s /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker /go/src/_/builds/smartweb/proj/php-dependency-checker
         - cd /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker
         - make build
-        - mv /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/bin/php-dependency-checker $CI_PROJECT_DIR/bin
+        - mv /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/bin/php-dependency-checker $CI_PROJECT_DIR
     artifacts:
         paths:
-            - bin/php-dependency-checker
+            - php-dependency-checker
         expire_in: 1 day
 
 artifact:branch:
@@ -51,7 +51,7 @@ artifact:branch:
         name: cgswong/aws:aws
         entrypoint: [""]
     script:
-        - "aws s3 cp --acl public-read bin/php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
+        - "aws s3 cp --acl public-read php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
     dependencies:
         - build
     when: manual
@@ -63,8 +63,8 @@ artifact:latest:
         entrypoint: [""]
     script:
         - 'ls -lah'
-        - 'aws s3 cp --acl public-read bin/php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-latest'
-        - "aws s3 cp --acl public-read bin/php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
+        - 'aws s3 cp --acl public-read php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-latest'
+        - "aws s3 cp --acl public-read php-dependency-checker s3://smartweb-artifacts/php-dependency-checker/php-dependency-checker-${CI_COMMIT_SHA}"
     dependencies:
         - build
     only:
