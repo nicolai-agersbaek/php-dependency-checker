@@ -41,7 +41,7 @@ build:
         - make build
     artifacts:
         paths:
-            - bin/
+            - bin/php-dependency-checker
         expire_in: 1 day
 
 artifact:branch:
