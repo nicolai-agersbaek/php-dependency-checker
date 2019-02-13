@@ -13,6 +13,7 @@ test:
             - /go/src/golang.org
             - /go/src/google.golang.org
             - /go/src/gopkg.in
+            - /go/src/gitlab.zitcom.dk
     script:
         - mkdir -p /go/src/gitlab.zitcom.dk/smartweb/proj
         - mkdir -p /go/src/_/builds/smartweb/proj/php-dependency-checker
@@ -32,6 +33,7 @@ build:
             - /go/src/golang.org
             - /go/src/google.golang.org
             - /go/src/gopkg.in
+            - /go/src/gitlab.zitcom.dk
     script:
         - mkdir -p /go/src/gitlab.zitcom.dk/smartweb/proj
         - mkdir -p /go/src/_/builds/smartweb/proj/php-dependency-checker
