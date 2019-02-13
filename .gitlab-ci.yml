@@ -42,7 +42,7 @@ build:
         - ls -lah
     artifacts:
         paths:
-            - bin/php-dependency-checker
+            - /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/bin/php-dependency-checker
         expire_in: 1 day
 
 artifact:branch:
