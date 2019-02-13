@@ -34,6 +34,7 @@ func (o verbosityOptions) GetVerbosity() cmd.Verbosity {
 
 type rootOpts struct {
 	verbosityOptions
+	failSilent             bool
 	cpuProfile, memProfile string
 	memProfileWritten      bool
 }
@@ -99,6 +100,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&rootOptions.vv, "vv", false, "Output detailed information.")
 	rootCmd.PersistentFlags().BoolVar(&rootOptions.vvv, "vvv", false, "Output debug information.")
 
+	rootCmd.PersistentFlags().BoolVar(&rootOptions.failSilent, "fail-silent", false, "Fail silently. Only exists with non-zero exit code on panics.")
+
 	rootCmd.PersistentFlags().StringVar(&rootOptions.cpuProfile, "cpu-profile", "", "Write CPU profile to file.")
 	rootCmd.PersistentFlags().StringVar(&rootOptions.memProfile, "mem-profile", "", "Write memory profile to file.")
 
@@ -137,8 +140,12 @@ func Execute() {
 				panic(err)
 			}
 
-			if _, ok := r.(errUnexportedClasses); ok {
-				os.Exit(1)
+			if e, ok := r.(cmd.Recoverable); ok {
+				if rootOptions.failSilent {
+					return
+				}
+
+				os.Exit(e.GetCode())
 			}
 
 			panic(r)

@@ -18,9 +18,10 @@ var checkInput = &checker.Input{}
 
 type printOptions struct {
 	maxFiles, maxLines int
+	disableProgressBar bool
 }
 
-var printOpts = &printOptions{5, 10}
+var printOpts = &printOptions{5, 10, false}
 
 type checkCmdOptions struct {
 	parallel bool
@@ -51,6 +52,8 @@ specified multiple times.`
 
 	checkCmd.Flags().BoolVarP(&checkCmdOpts.parallel, "parallel", "p", true, "Perform parallel name resolution.")
 
+	checkCmd.Flags().BoolVar(&printOpts.disableProgressBar, "no-progress", printOpts.disableProgressBar, "Disable progress-bar in output.")
+
 	maxFilesDesc := `Maximum number of files to display in error summary.
 If negative, all files will be shown.`
 	checkCmd.Flags().IntVar(&printOpts.maxFiles, "max-files", printOpts.maxFiles, maxFilesDesc)
@@ -69,15 +72,15 @@ var checkCmd = &cobra.Command{
 	Run:   check,
 }
 
-type errUnexportedClasses error
+type errUnexportedClasses cmd.Recoverable
 
-func newUnexportedClsErr() error {
-	return errUnexportedClasses(errors.New("unexported classes"))
+func newUnexportedClsErr() errUnexportedClasses {
+	return cmd.NewRecoverable(errors.New("unexported classes"), 1)
 }
 
 func check(c *cobra.Command, args []string) {
 	p := getVerbosePrinter(c)
-	R, S := runCheck(args, p, checkCmdOpts.parallel)
+	R, S := runCheck(args, p, checkCmdOpts.parallel, printOpts.disableProgressBar)
 
 	if S.UniqueClsErrs > 0 {
 		printLnf("Found %d unique errors in %d files.", S.UniqueClsErrs, S.FilesWithErrs)
@@ -91,7 +94,7 @@ func check(c *cobra.Command, args []string) {
 	}
 }
 
-func runCheck(args []string, p cmd.VerbosePrinter, parallel bool) (*checker.Result, *checker.ResultStats) {
+func runCheck(args []string, p cmd.VerbosePrinter, parallel, noProgress bool) (*checker.Result, *checker.ResultStats) {
 	checkInput.Sources = args
 
 	progressChan := make(chan int)
@@ -109,13 +112,11 @@ func runCheck(args []string, p cmd.VerbosePrinter, parallel bool) (*checker.Resu
 
 			p.VLine(fmt.Sprintf("Analyzing %d files...", numFiles), cmd.VerbosityDetailed)
 
-			bar = progressBar(numFiles)
+			if !noProgress {
+				bar = progressBar(numFiles)
+			}
 
-			go func(bar *uiprogress.Bar, progress <-chan int) {
-				for range progress {
-					bar.Incr()
-				}
-			}(bar, progressChan)
+			go readProgress(bar, progressChan)
 		}
 	}
 
@@ -134,6 +135,18 @@ func runCheck(args []string, p cmd.VerbosePrinter, parallel bool) (*checker.Resu
 	p.VLine(fmt.Sprintf("Elapsed: %.2fs (avg. %s)", elapsed.Seconds(), cmd.FormatDuration(avgDuration)), cmd.VerbosityNormal)
 
 	return R, S
+}
+
+func readProgress(bar *uiprogress.Bar, progress <-chan int) {
+	if bar == nil {
+		for range progress {
+		}
+		return
+	}
+
+	for range progress {
+		bar.Incr()
+	}
 }
 
 func printParserErrors(printer cmd.VerbosePrinter, errs <-chan *analysis.ParserErrors) {

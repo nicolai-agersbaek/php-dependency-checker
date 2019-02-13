@@ -30,7 +30,7 @@ var importsCmd = &cobra.Command{
 
 func imports(c *cobra.Command, args []string) {
 	p := getVerbosePrinter(c)
-	R, _ := runCheck(args, p, importsCmdOpts.parallel)
+	R, _ := runCheck(args, p, importsCmdOpts.parallel, printOpts.disableProgressBar)
 
 	imports := R.Imports
 

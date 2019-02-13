@@ -26,7 +26,7 @@ var exportsCmd = &cobra.Command{
 
 func exports(c *cobra.Command, args []string) {
 	p := getVerbosePrinter(c)
-	R, _ := runCheck(args, p, exportsCmdOpts.parallel)
+	R, _ := runCheck(args, p, exportsCmdOpts.parallel, printOpts.disableProgressBar)
 
 	printUses(p, "Exports", R.Exports.Diff(names.GetBuiltInNames()))
 }
