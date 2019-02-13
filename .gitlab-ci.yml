@@ -42,7 +42,7 @@ build:
         - mv /go/src/gitlab.zitcom.dk/smartweb/proj/php-dependency-checker/bin/php-dependency-checker $CI_PROJECT_DIR
     artifacts:
         paths:
-            - bin/
+            - bin/php-dependency-checker
         expire_in: 1 day
 
 artifact:branch:
