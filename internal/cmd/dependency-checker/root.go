@@ -136,7 +136,7 @@ func Execute() {
 			pprof.StopCPUProfile()
 
 			err := rootOptions.writeMemProfile()
-			if err != nil {
+			if err != nil && !rootOptions.failSilent {
 				panic(err)
 			}
 
@@ -148,7 +148,9 @@ func Execute() {
 				os.Exit(e.GetCode())
 			}
 
-			panic(r)
+			if !rootOptions.failSilent {
+				panic(r)
+			}
 		}
 	}()
 
